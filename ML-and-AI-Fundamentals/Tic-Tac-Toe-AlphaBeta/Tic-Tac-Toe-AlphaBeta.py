@@ -1,13 +1,6 @@
 #zaimplementować algorytm alpha-beta, Monte Carlo Tree Search lub tablice Nalimova (jedno do wyboru) dla wybranej przez siebie gry
 #(nie każda się do tego nadaje). Propozycje w miarę prostych gier: pan dla 2 osób, czwórki, kółko i krzyżyk: 3x3 lub gomoku, warcaby,
-#młynek. W miarę możliwości najlepiej wybrać grę, z którą jest się jakoś emocjonalnie związanym, wtedy jest znacznie więcej radości z
-#pisania takiego programu ;)
-#
-#kółko i krzyżyk i alpha-beta:
-
-# Zadanie 4
-# Mateusz Wizner
-# numer indeksu 277508
+#młynek
 
 def print_board(board):
     symbol_map = {1: 'X', -1: 'O', 0: '-'}
