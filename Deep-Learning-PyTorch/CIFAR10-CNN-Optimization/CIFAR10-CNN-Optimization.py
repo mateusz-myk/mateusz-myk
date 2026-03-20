@@ -1,8 +1,3 @@
-# Zadanie 3
-# Mateusz Wizner
-# numer indeksu 277508
-
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
