@@ -1,4 +1,4 @@
-# Mateusz Myk - Portfolio & Projekty
+# Mateusz Wizner - Portfolio & Projekty
 
 Witaj! To moje repozytorium portfolio, zawierające różnorodne projekty z dziedzin Uczenia Maszynowego, Deep Learning, Data Science, Software Development (C++/C#/Python) oraz Analizy Danych. Powstały głównie w ramach studiów i kursów.
 
