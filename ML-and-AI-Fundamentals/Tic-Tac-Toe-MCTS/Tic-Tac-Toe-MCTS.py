@@ -1,6 +1,3 @@
-# Zadanie 3
-# Mateusz Wizner
-
 import random
 import math
 from copy import deepcopy
