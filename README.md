@@ -27,4 +27,4 @@ Cześć! W tym repozytorium zbieram projekty, które realizowałem podczas studi
 - Lokalizacja: **Wrocław, Polska**
 - Studia: **Matematyka, 3 rok – Politechnika Wrocławska**
 
-Repozytorium jest stale rozwijane — regularnie dokładam nowe projekty i usprawnienia.
+Repozytorium jest stale rozwijane.
