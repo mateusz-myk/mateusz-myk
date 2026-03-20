@@ -11,14 +11,14 @@ Witaj! To moje repozytorium portfolio, zawierające różnorodne projekty z dzie
 
 ## Projekty (kliknij folder)
 
-| Kategoria | Przykłady | Przykładowy link |
-|-----------|-----------| |
-| ML/Deep Learning | CIFAR-10 CNN, MNIST NN, regresje | |
-| Gry/AI | Tic-Tac-Toe MCTS, AlphaBeta | |
-| Data Engineering | SQL + Faker data gen | |
-| C++/C# | Binary Trees, Sokoban, WPF App | |
-| R/Statystyka | Survival Analysis, Time Series | |
-| Symulacje | 3-Body Problem Simulator | [3-Body Problem](./3-Body_Problem_Simulator/) |
+| Kategoria | Przykłady |
+|-----------|-----------|
+| ML/Deep Learning | CIFAR-10 CNN, MNIST NN, regresje |
+| Gry/AI | Tic-Tac-Toe MCTS, AlphaBeta |
+| Data Engineering | SQL + Faker data gen |
+| C++/C# | Binary Trees, Sokoban, WPF App |
+| R/Statystyka | Survival Analysis, Time Series |
+| Symulacje | 3-Body Problem Simulator |
 
 
 ## Jak używać
