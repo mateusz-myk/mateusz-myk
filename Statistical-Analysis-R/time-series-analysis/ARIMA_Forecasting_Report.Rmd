@@ -1,0 +1,291 @@
+---
+title: "Sprawozdanie 2"
+author: "Mateusz Wizner 277508"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    fig_caption: true
+    fig_width: 7
+    fig_height: 5
+    toc_depth: 3
+    number_sections: false
+  html_document:
+    toc: true
+    toc_depth: 3
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: '3'
+fontsize: 12pt
+subtitle: Analiza szeregów czasowych
+header-includes:
+- \usepackage{polyglossia}
+- \setdefaultlanguage{polish}
+- \usepackage{xcolor}
+- \definecolor{myblue}{HTML}{D0E9F9}
+- \definecolor{myyellow}{HTML}{FFFACD}
+- \usepackage{graphicx}
+- \usepackage{float}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.pos = "H",
+  out.extra = "",
+  fig.align = "center"
+)
+```
+
+```{r biblioteki}
+library(forecast)
+library(astsa)
+library(tseries)
+```
+
+# Wprowadzenie
+
+Niniejsze sprawozdanie zawiera rozwiązanie zadania 3 z listy 2.
+
+
+# **3a) Stacjonarność**
+
+## **3a1 – Wczytanie danych i wykres szeregu**
+```{r 3a1}
+data(gtemp_both)
+g <- gtemp_both
+
+ts.plot(g, main = "gtemp_both")
+```
+
+Szereg wykazuje **wyraźny trend wzrostowy**, szczególnie nasilony od **drugiej połowy XX wieku**.  
+Ponieważ dane są roczne, **nie występuje sezonowość**, natomiast obecność trendu oznacza  
+**niestacjonarność średniej**, co wymaga zastosowania odpowiedniej transformacji  
+przed estymacją modeli AR(\(p\)).
+
+## **3a2 – ACF/PACF oryginalnego szeregu**
+```{r 3a2}
+ggtsdisplay(g, main = "Oryginalny szereg gtemp_both")
+
+```
+
+ACF **opada bardzo wolno**, co stanowi **klasyczny sygnał niestacjonarności** w szeregu czasowym.
+
+## **3a3 – Różnicowanie**
+```{r 3a3}
+g_diff <- diff(g, lag = 1)
+ggtsdisplay(g_diff, main = "gtemp_both po różnicowaniu")
+```
+
+Różnicowanie usuwa **sporą część trendu**, jednak szereg nadal **nie jest w pełni stacjonarny**.  
+ACF **wciąż opada wolno** i pozostaje dodatnia dla wielu opóźnień,  
+a PACF **nie wykazuje wyraźnego ucięcia**, typowego dla stacjonarnego modelu AR(\(p\)).  
+Wskazuje to, że **samo różnicowanie jest niewystarczające** i konieczne jest rozważenie  
+**usunięcia trendu wielomianowego**.
+
+## **3a4 – Trend wielomianowy**
+```{r 3a4}
+t <- time(g)
+
+# Trend liniowy
+lm_lin  <- lm(g ~ t)
+res_lin <- resid(lm_lin)
+
+# Trend kwadratowy
+lm_quad  <- lm(g ~ poly(t, 2))
+res_quad <- resid(lm_quad)
+
+ggtsdisplay(res_lin,  main = "Reszty po trendzie liniowym")
+ggtsdisplay(res_quad, main = "Reszty po trendzie kwadratowym")
+```
+
+Wybieramy **trend kwadratowy**, ponieważ po jego usunięciu reszty wykazują **znacznie lepsze własności stacjonarne** niż po usunięciu trendu liniowego.  
+W szczególności:
+
+- reszty po trendzie liniowym nadal wykazują **wyraźną strukturę zależności w czasie**,  
+  a ACF **opada wolno**, co wskazuje na **niedostateczne usunięcie trendu**,  
+- reszty po trendzie kwadratowym **nie zawierają już systematycznych wzorców**,  
+  a ACF i PACF **szybko zanikają**, co jest zgodne ze stacjonarnością,  
+- wykres reszt po trendzie kwadratowym **nie pokazuje już długookresowego wzrostu ani krzywizny**.
+
+Łącznie wskazuje to, że **trend kwadratowy lepiej usuwa deterministyczną strukturę** i prowadzi do szeregu bliższego stacjonarności.
+
+
+# **3b) Wybór rzędu p – PACF, AIC, FPE**
+
+## **3b1 – Modele AR dla różnicowania**
+```{r 3b1}
+pmax <- 15
+
+fit_diff_yw  <- ar(g_diff, method="yw",  order.max=pmax, aic=TRUE)
+fit_diff_mle <- ar(g_diff, method="mle", order.max=pmax, aic=TRUE)
+
+aic_diff_mle <- fit_diff_mle$aic
+fpe_diff_mle <- fit_diff_mle$var.pred * (fit_diff_mle$n.used + 2*(0:pmax)) / fit_diff_mle$n.used
+
+par(mfrow=c(1,2))
+plot(0:pmax, aic_diff_mle, type="b", main="AIC – diff – MLE")
+plot(0:pmax, fpe_diff_mle, type="b", main="FPE – diff – MLE")
+par(mfrow=c(1,1))
+```
+
+Minimum kryterium AIC dla podejścia z różnicowaniem pojawia się przy **niewielkich wartościach rzędu**  
+\(p\) (np. \(p = 5\)), a dalsze zwiększanie rzędu **nie poprawia jakości dopasowania**.  
+Wskazuje to, że model AR o **stosunkowo niskim rzędzie** jest wystarczający.
+
+Podsumowując, optymalny rząd modelu AR dla szeregu po różnicowaniu powinien być **niewielki**.
+
+```{r 3b2}
+p_diff <- which.min(aic_diff_mle) - 1
+fit_tr_mle <- ar(res_quad, method="mle", order.max=15, aic=TRUE)
+aic_tr_mle <- fit_tr_mle$aic
+p_tr <- which.min(aic_tr_mle) - 1
+```
+
+Optymalny rząd modelu po różnicowaniu wynosi  
+\(\mathbf{p_{\text{diff}} = 5}\),  
+natomiast po usunięciu trendu kwadratowego  
+\(\mathbf{p_{\text{tr}} = 1}\),  
+co pokazuje, że podejście z trendem prowadzi do **znacznie prostszego modelu**.
+
+# **3c) Estymacja parametrów – Yule–Walker vs MLE**
+
+## **3c1 – Estymacja dla różnicowania**
+```{r 3c1}
+fit_diff_yw_p  <- ar(g_diff, method="yw",  order.max=p_diff, aic=FALSE)
+fit_diff_mle_p <- ar(g_diff, method="mle", order.max=p_diff, aic=FALSE)
+
+fit_diff_yw_p$ar
+fit_diff_mle_p$ar
+
+```
+
+Parametry oszacowane metodami **Yule’a–Walkera** oraz **MLE** są **bardzo zbliżone** —  
+różnice pojawiają się dopiero na dalszych miejscach po przecinku.  
+Świadczy to o **stabilności estymacji** oraz **dobrym dopasowaniu modelu**.
+
+## **3c2 – Estymacja dla trendu**
+```{r 3c2}
+fit_tr_yw_p  <- ar(res_quad, method="yw",  order.max=p_tr, aic=FALSE)
+fit_tr_mle_p <- ar(res_quad, method="mle", order.max=p_tr, aic=FALSE)
+
+fit_tr_yw_p$ar
+fit_tr_mle_p$ar
+
+
+```
+
+Parametry oszacowane metodami **Yule’a–Walkera** i **MLE** różnią się jedynie **minimalnie**,  
+co wskazuje, że oba podejścia prowadzą do **praktycznie identycznego dopasowania**  
+modelu AR(1).
+
+# **3d) Przedziały ufności parametrów AR(p)**
+
+## **3d1 – CI dla modeli AR(p)**
+```{r 3d1}
+fit_diff_mle_arima <- Arima(g_diff, order=c(p_diff,0,0), include.mean=TRUE)
+fit_tr_mle_arima   <- Arima(res_quad, order=c(p_tr,0,0), include.mean=TRUE)
+
+coefs_diff <- coef(fit_diff_mle_arima)
+se_diff    <- sqrt(diag(vcov(fit_diff_mle_arima)))
+
+alpha <- 0.05
+z <- qnorm(1 - alpha/2)
+
+CI_diff <- cbind(est=coefs_diff,
+                 lower=coefs_diff - z*se_diff,
+                 upper=coefs_diff + z*se_diff)
+
+CI_diff
+
+
+```
+
+Wszystkie współczynniki AR mają **przedziały ufności w całości oddalone od zera**,  
+co oznacza, że są **statystycznie istotne** na poziomie \(\alpha = 0.05\).  
+Jedynie **wyraz wolny** ma przedział obejmujący zero, a zatem **nie jest istotny**.
+
+# **3e) Diagnostyka reszt**
+
+## **3e1 – checkresiduals**
+
+```{r 3e1}
+checkresiduals(fit_diff_mle_arima)
+checkresiduals(fit_tr_mle_arima)
+```
+
+W obu modelach reszty można uznać za **białoszumowe**: wartości \(p\) w testach  
+Ljunga–Boxa (\(p = 0.787\) dla AR(5) oraz \(p = 0.722\) dla AR(1)) są **wysokie**,  
+co oznacza brak podstaw do odrzucenia hipotezy o **braku autokorelacji**.
+
+# **3f) Prognozy**
+
+## **3f1 – Prognozy ARIMA(p,1,0)**
+```{r 3f1}
+h <- 10
+fit_full_diff <- Arima(g, order=c(p_diff,1,0))
+fc_diff <- forecast(fit_full_diff, h=h)
+
+plot(fc_diff, main=paste0("Prognozy – ARIMA(", p_diff, ",1,0)"))
+
+```
+
+Prognoza **ARIMA(5,1,0)** podtrzymuje dotychczasowy **trend wzrostowy** szeregu,  
+a **przedziały ufności rozszerzają się** wraz z horyzontem prognozy,  
+co odzwierciedla **rosnącą niepewność** przewidywań.
+
+
+## **3f2 – Prognozy trend + AR(p)**
+```{r 3f2}
+t_new <- seq(max(t)+1, by=1, length.out=h)
+trend_forecast <- predict(lm_quad, newdata=data.frame(t=t_new))
+
+fc_res <- forecast(fit_tr_mle_arima, h=h)
+res_forecast <- as.numeric(fc_res$mean)
+
+fc_trend_total <- ts(trend_forecast + res_forecast,
+                     start=end(g)[1] + 1, frequency=frequency(g))
+
+ts.plot(g, xlim=c(start(g)[1], end(g)[1] + h),
+        main="Prognoza: trend + AR(p)")
+lines(fc_trend_total, col="blue")
+
+
+```
+
+Obie prognozy podtrzymują **długookresowy trend wzrostowy**, jednak różnią się charakterem.  
+Podejście **„trend + AR(\(p\))”** daje prognozę bardziej **gładką i deterministyczną**,  
+wynikającą z ekstrapolacji trendu wielomianowego.  
+Z kolei model **ARIMA(5,1,0)** generuje ścieżkę z **rosnącą niepewnością**,  
+co widoczne jest w **szerokich przedziałach ufności**.
+
+Prognoza ARIMA jest więc **bardziej konserwatywna** i uwzględnia **większą wariancję** przyszłych obserwacji,  
+podczas gdy podejście z trendem silniej akcentuje **kontynuację dotychczasowego wzrostu**.
+
+# **3g) Porównanie podejść**
+
+## **3g1 – Kryteria informacyjne**
+```{r 3g1}
+AIC(fit_full_diff); BIC(fit_full_diff)
+AIC(fit_tr_mle_arima); BIC(fit_tr_mle_arima)
+```
+
+Porównanie kryteriów informacyjnych wskazuje, że model **ARIMA(5,1,0)** (różnicowanie)  
+ma **niższe wartości AIC i BIC** (dwie pierwsze) niż model z trendem  
+(dwie ostatnie), co oznacza, że podejście z **trendem kwadratowym**  
+jest **preferowane według obu kryteriów**.
+
+## **3g2 – Wariancja reszt**
+```{r 3g2}
+var(residuals(fit_full_diff))
+var(residuals(fit_tr_mle_arima))
+```
+
+Wariancja reszt w modelu z różnicowaniem (\(0.0242\)) jest **nieco wyższa** niż w modelu z trendem  
+(\(0.0227\)), co sugeruje, że podejście z **trendem kwadratowym** zapewnia **minimalnie lepsze dopasowanie**  
+pod względem zmienności niewyjaśnionej przez model.
+

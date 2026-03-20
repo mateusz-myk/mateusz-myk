@@ -1,0 +1,916 @@
+---
+title: "Sprawozdanie 1"
+author: "Mateusz Wizner 277508"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    fig_caption: true
+    fig_width: 7
+    fig_height: 5
+    toc_depth: 3
+    number_sections: false
+  word_document:
+    toc: true
+    toc_depth: '3'
+fontsize: 12pt
+subtitle: Analiza szeregów czasowych
+header-includes:
+- \usepackage{polyglossia}
+- \setdefaultlanguage{polish}
+- \usepackage{xcolor}
+- \definecolor{myblue}{HTML}{D0E9F9}
+- \definecolor{myyellow}{HTML}{FFFACD}
+- \usepackage{graphicx}
+- \usepackage{float}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE, 
+  warning = FALSE,
+  fig.pos = "H",
+  out.extra = "",
+  fig.align = "center"
+)
+```
+
+```{r biblioteki, message=FALSE, warning=FALSE}
+library(forecast)
+library(TSAFBook)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+```
+
+---
+
+# Wprowadzenie
+
+Niniejsze sprawozdanie zawiera rozwiązania zadań 3 i 4 z listy 1.
+
+# Zadanie 3: Testowanie białoszumowości
+
+## Zadanie 3a) - Implementacja testów białoszumowości
+
+Zadanie 3a) wymaga implementacji i ilustracji działania graficznego oraz formalnych testów statystycznych weryfikujących hipotezę, że obserwowany szereg czasowy jest szeregiem typu biały szum (white noise).
+
+### Podstawy teoretyczne
+
+Biały szum (WN) to ciąg zmiennych nieskorelowanych o średniej 0 i stałej wariancji $\sigma^2$. Teoretyczna funkcja autokorelacji $\rho(h)$ dla białego szumu wynosi zero dla każdego $h \neq 0$.
+
+Dla szeregu IID, próbkowe autokorelacje $\hat{\rho}(k)$ są w przybliżeniu niezależnymi zmiennymi losowymi o rozkładzie normalnym ze średnią 0 i wariancją $1/n$. Asymptotyczne 95% przedziały istotności wynoszą: $\pm 1.96/\sqrt{n}$.
+
+### Przygotowanie danych
+
+```{r zadanie3a_dane}
+# Ustawienie parametrów
+n <- 100
+alfa <- 0.05
+h_max <- floor(n / 4)
+
+# Generowanie gaussowskiego białego szumu
+set.seed(2025) 
+WN <- rnorm(n)
+WN_ts <- ts(WN)
+```
+
+Parametry symulacji:  
+Długość szeregu (n): `r n`  
+Poziom istotności ($\alpha$): `r alfa`  
+Maksymalne opóźnienie (\(h_{\text{max}}\)): `r h_max`
+
+### Test graficzny
+
+Test graficzny polega na ocenie próbkowej funkcji autokorelacji (ACF). Dla białego szumu asymptotycznie oczekujemy, że około 95% próbkowych autokorelacji $\hat{\rho}(k)$ będzie mieścić się w przedziale $\pm 1.96/\sqrt{n}$. Szereg można uznać za realizację białego szumu, jeśli:
+
+1. Zdecydowana większość autokorelacji próbkowych mieści się w asymptotycznych przedziałach ufności
+2. Brak systematycznych wzorców wykraczających poza te przedziały
+
+```{r zadanie3a_graficzny, fig.cap="Graficzny test białoszumowości - wykres szeregu, ACF i PACF"}
+ggtsdisplay(WN_ts, main = "Graficzny test białoszumowości dla WN (n=100)")
+```
+
+**Interpretacja:** Na wykresie ACF widoczne jest, że zdecydowana większość słupków znajduje się w obrębie niebieskich przerywanych linii (asymptotycznych przedziałów ufności). Słupki reprezentują próbkowe autokorelacje, które są bliskie zeru, co wizualnie potwierdza, że szereg może być traktowany jako biały szum.
+
+### Testy formalne
+
+Formalne testy statystyczne weryfikują hipotezę zerową $H_0$, że obserwowane autokorelacje są jednocześnie równe zero aż do opóźnienia $h_{max}$.
+
+
+**--- Formalne testy statystyczne ---**
+
+Maksymalne opóźnienie (lag) \(h_{\text{max}}\) = `r h_max`
+
+**Wynik testu Boxa-Pierce’a**
+
+```{r 1}
+test_BP <- Box.test(WN_ts, type = "Box-Pierce", lag = h_max)
+print(test_BP)
+```
+
+**Wynik testu Ljunga-Boxa**
+
+```{r 2}
+test_LB <- Box.test(WN_ts, type = "Ljung-Box", lag = h_max)
+print(test_LB)
+```
+
+**Wynik testu Ljunga-Boxa dla \(h_{\text{max}}\) = 1**
+
+```{r 3}
+h1 <- 1
+print(Box.test(WN_ts, type = "Ljung-Box", lag = h1))
+```
+
+**Interpretacja**
+
+*Test Boxa-Pierce’a*
+*p*-value = 0.1421 > \(\alpha\) = 0.05 – brak podstaw do odrzucenia \(H_0\)
+
+*Test Ljunga-Boxa*
+*p*-value = 0.0555 > \(\alpha\) = 0.05 – brak podstaw do odrzucenia \(H_0\)
+
+Ponieważ wygenerowany szereg jest realizacją białego szumu,  
+oczekujemy wysokich wartości *p*-value, co oznacza brak podstaw  
+do odrzucenia hipotezy zerowej o białoszumowości.
+
+## Zadanie 3b) - Symulacje porównawcze
+
+Zadanie 3b) wymaga przeprowadzenia symulacji komputerowych mających na celu porównanie skuteczności graficznego testu białoszumowości z formalnymi testami statystycznymi.
+
+### Część I: Porównanie rozmiaru testu dla białego szumu
+
+W pierwszej kolejności porównamy, jak często testy formalne odrzucają prawdziwą hipotezę zerową.
+
+```{r zadanie3b_rozmiar}
+# Parametry symulacji
+n <- 30
+ile.powtorz <- 1000
+h.max <- floor(n/4)
+alfa <- 0.05
+
+# Realizacje szumu IID - rozkład Normalny
+realizacje_norm <- matrix(rnorm(n*ile.powtorz, mean=0, sd=1), n, ile.powtorz)
+
+# Testy Boxa-Pierce'a i Ljungi-Boxa
+wynik.BP.norm <- apply(realizacje_norm, 2, 
+                       function(x) Box.test(x, type="Box-Pierce", lag=h.max)$p.value)
+wynik.LB.norm <- apply(realizacje_norm, 2, 
+                       function(x) Box.test(x, type="Ljung-Box", lag=h.max)$p.value)
+
+# Obliczenie empirycznego rozmiaru
+rozmiar.BP.norm <- mean(wynik.BP.norm < alfa)
+rozmiar.LB.norm <- mean(wynik.LB.norm < alfa)
+
+# Realizacje szumu IID - rozkład Wykładniczy
+realizacje_exp <- matrix(rexp(n=n*ile.powtorz, rate=1) - 1, n, ile.powtorz)
+
+
+wynik.BP.exp <- apply(realizacje_exp, 2,
+                      function(x) Box.test(x, type="Box-Pierce", lag=h.max)$p.value)
+
+wynik.LB.exp <- apply(realizacje_exp, 2,
+                      function(x) Box.test(x, type="Ljung-Box", lag=h.max)$p.value)
+
+# Empiryczny rozmiar
+rozmiar.BP.exp <- mean(wynik.BP.exp < alfa)
+rozmiar.LB.exp <- mean(wynik.LB.exp < alfa)
+```
+
+Symulacja dla `r n` obserwacji, z maksymalnym opóźnieniem `r h.max`.
+
+**Rozkład Normalny**
+
+Empiryczny rozmiar testu Boxa-Pierce’a:  `r round(rozmiar.BP.norm, 4)`
+
+Empiryczny rozmiar testu Ljunga-Boxa:  `r round(rozmiar.LB.norm, 4)`
+
+**Rozkład wykładniczy (po przesunięciu do średniej 0)**
+
+Empiryczny rozmiar testu Boxa-Pierce’a: `r round(rozmiar.BP.exp, 4)`
+
+Empiryczny rozmiar testu Ljunga-Boxa: `r round(rozmiar.LB.exp, 4)`
+
+
+
+**Wnioski:** Test Ljung-Boxa ma rozmiar bliższy nominalnemu poziomowi $\alpha = 0.05$, szczególnie dla małych $n$, w porównaniu do testu Boxa-Pierce'a.
+
+### Część II: Szeregi niespełniające założenia białego szumu
+
+***A. Model MA(1) z małą korelacją***
+
+Model ruchomej średniej rzędu 1 (MA(1)) ma teoretyczną autokorelację zerową dla opóźnień $h \geq 2$. Użycie małego parametru $\theta = 0.1$ sprawi, że korelacja będzie niewielka.
+
+```{r zadanie3b_ma1}
+n <- 25
+h.max <- floor(n/4)
+theta <- 0.1
+
+MA1 <- arima.sim(n=n, model = list(ma=theta))
+
+ggAcf(MA1, main = "ACF dla MA(1), \u03B8 = 0.1")
+```
+
+Testy dla \(h_{\text{max}} = \) `r h.max`
+
+```{r test_formalny}
+test_ma1 <- Box.test(MA1, type="Ljung-Box", lag=h.max)
+print(test_ma1)
+```
+
+**Interpretacja:** Dla małego $n$ i małej korelacji ($\theta = 0.1$), test graficzny może nie wykazać znaczącego przekroczenia granic dla $h=1$, a formalne testy mogą nie odrzucić $H_0$ (niska moc testu dla małych próbek i małej korelacji).
+
+***B. Błądzenie losowe (Random Walk)***
+
+Błądzenie losowe nie jest szeregiem stacjonarnym, a jego ACF zanika bardzo powoli. Testy białoszumowości powinny zdecydowanie odrzucić $H_0$.
+
+```{r zadanie3b_rw}
+n <- 50
+RW <- cumsum(rnorm(n))
+h.max <- floor(n/4)
+
+ggAcf(RW, main="ACF dla Random Walk")
+```
+
+Testy dla \(h_{\text{max}} = \) `r h.max`
+
+```{r test_formalny2}
+test_rw <- Box.test(RW, type="Ljung-Box", lag=h.max)
+print(test_rw)
+```
+
+**Interpretacja:** Test graficzny i formalny zgodnie odrzucają $H_0$ o białoszumowości, ponieważ błądzenie losowe wykazuje silną, powoli zanikającą autokorelację, charakterystyczną dla niestacjonarnych szeregów z trendem.
+
+***C. Szereg z trendem deterministycznym***
+
+Szereg $X_t = m_t + WN_t$, gdzie $m_t$ jest trendem liniowym, również jest niestacjonarny, a jego ACF zanika powoli i dodatnio.
+
+**Szereg z trendem liniowym + biały szum**
+
+```{r zadanie3b_trend}
+n <- 100
+WN <- ts(rnorm(n, mean = 0, sd = 1), frequency = 1)
+delta <- 0.2
+trend.liniowy <- delta*time(WN)
+szereg1 <- ts(WN + trend.liniowy, frequency = 1)
+h.max <- floor(n/4)
+
+ggtsdisplay(szereg1, main="Szereg z trendem liniowym")
+```
+
+Testy dla \(h_{\text{max}} = \) `r h.max`
+
+```{r test_formalny3}
+test_trend <- Box.test(szereg1, type="Ljung-Box", lag=h.max)
+print(test_trend)
+```
+
+**Interpretacja:** Zarówno ACF (wykres) jak i test formalny (niskie p-value) wskazują na istotną zależność, potwierdzając, że szereg nie jest białym szumem.
+
+### Podsumowanie porównania testów
+
+Kluczowe różnice obserwowane w symulacjach:
+
+**1. Rozmiar testów**
+
+Dla \(n = 30\) i \(h_{\text{max}} = 7\):
+
+- **Rozkład normalny**:  
+  Box–Pierce ma wyraźnie zaniżony rozmiar (0.028),  
+  Ljung–Box zawyżony (0.072).
+
+- **Rozkład wykładniczy**:  
+  Box–Pierce bardzo konserwatywny (0.011),  
+  Ljung–Box bliżej nominalnego poziomu 0.05 (0.04).
+
+**Wniosek**:  
+
+Ljung–Box zwykle trafia bliżej \(\alpha = 0{,}05\), choć przy małych próbach bywa liberalny.  
+Box–Pierce jest systematycznie konserwatywny, co obniża moc, ale dobrze kontroluje błąd I rodzaju.
+
+
+**2. Wpływ rozkładu**
+
+Rozkład wykładniczy powoduje silniejszą konserwatywność obu testów niż normalny.
+
+
+**3. Wpływ \(h_{\text{max}}\)**
+
+- Zbyt małe \(h_{\text{max}}\) obniża moc.
+- Zbyt duże względem \(n\) prowadzi do niestabilności i konserwatywności.
+
+
+**4. Metoda graficzna vs testy formalne**
+
+- **ACF**: szybka diagnoza rodzaju zależności; wskazuje charakter autokorelacji, ale wymaga subiektywnej interpretacji i bywa wrażliwa na pojedyncze skoki.
+- **Testy formalne**:  dostarczają obiektywnej oceny statystycznej, analizując pojedynczą statystykę opartą na ACF dla początkowych opóźnień.
+
+
+**5. Skuteczność wykrywania naruszeń**
+
+- Dla silnych odstępstw (trend, random walk) wszystkie metody jednoznacznie odrzucają \(H_0\).
+- Dla słabych zależności (np. MA(1) z \(\theta = 0{,}1\)) moc jest niska przy małych \(n\).
+- Moc rośnie wraz z długością szeregu i siłą autokorelacji.
+
+\newpage
+
+# Zadanie 4: Dekompozycja szeregów czasowych
+
+## Wybór szeregu i wstępna analiza
+
+Do analizy wybrano **bezrobocie** z pakietu TSAFBook, który reprezentuje miesięczną stopę bezrobocia rejestrowanego w Polsce. Szereg ten charakteryzuje się nieregularnym trendem długoterminowym oraz wyraźną sezonowością roczną.
+
+```{r zadanie4_dane}
+data(bezrobocie)
+```
+
+**Podstawowe statystyki szeregu `bezrobocie`**
+
+- Okres: od `r paste(start(bezrobocie), collapse = "-")` do `r paste(end(bezrobocie), collapse = "-")`  
+- Częstotliwość: `r frequency(bezrobocie)` obserwacji na jednostkę czasu  
+- Liczba obserwacji: `r length(bezrobocie)`  
+- Średnia: \(\mu =\) `r round(mean(bezrobocie), 2)`  
+- Mediana: \(\text{mediana} =\) `r round(median(bezrobocie), 2)`  
+- Odchylenie standardowe: \(\sigma =\) `r round(sd(bezrobocie), 2)`
+
+\newpage
+
+***Analiza graficzna***
+
+```{r zadanie4_wykresy, fig.width=10, fig.height=8, fig.cap="Wstępna analiza graficzna szeregu bezrobocie"}
+# Wykres szeregu
+p1 <- autoplot(bezrobocie) + 
+  labs(title = "Miesięczna stopa bezrobocia w Polsce", 
+       y = "Stopa (%)", x = "Rok") +
+  theme_minimal()
+
+# Wykres sezonowy
+p2 <- ggseasonplot(bezrobocie, year.labels = TRUE) + 
+  labs(title = "Wykres sezonowy", y = "Stopa (%)", x = "Miesiąc") +
+  theme_minimal()
+
+print(p1)
+print(p2)
+```
+
+```{r zadanie4_acf, fig.cap="Funkcje ACF i PACF dla szeregu bezrobocie"}
+ggtsdisplay(bezrobocie, main = "ACF i PACF dla szeregu bezrobocie")
+```
+
+```{r zadanie4_lambda}
+lambda_opt <- BoxCox.lambda(bezrobocie)
+```
+
+**Optymalne \(\lambda\) (Box-Cox):** `r round(lambda_opt, 3)`
+
+**Interpretacja:**  
+\(\lambda\) bliskie 1 sugeruje, że szereg ma charakter addytywny  
+i transformacja Boxa-Coxa nie jest konieczna.  
+Mimo to, dla celów porównawczych, przetestowano również model z \(\lambda = 0\) (logarytmizacja).
+
+
+**Wnioski z wstępnej analizy:**
+
+1. **Trend:** Widoczny jest nieregularny trend długoterminowy. Stopa bezrobocia osiągnęła szczyt około 2004 roku, następnie spadła, po 2008 roku ponownie wzrosła i zaczęła spadać.
+
+2. **Sezonowość:** Wahania sezonowe (powtarzające się cykle roczne) są bardzo wyraźne. Najwyższa stopa bezrobocia występuje zimą (styczeń-luty), najniższa latem.
+
+3. **Wariancja:** Amplituda wahań sezonowych i wariancja wokół trendu nie zmieniają się istotnie wraz z poziomem szeregu, co sugeruje preferowanie modelu addytywnego.
+
+4. **ACF:** Funkcja autokorelacji zanika bardzo powoli i cyklicznie, co świadczy o obecności trendu długoterminowego i sezonowego oraz o niestacjonarności szeregu.
+
+\newpage
+
+## Dekompozycja na podstawie ruchomej średniej (decompose)
+
+**Model addytywny**
+
+```{r zadanie4_decompose_add, fig.width=10, fig.height=8, fig.cap="Dekompozycja addytywna (decompose)"}
+dekomp_add <- decompose(bezrobocie, type = "additive")
+autoplot(dekomp_add) + 
+  labs(title = "Dekompozycja addytywna") +
+  theme_minimal()
+```
+
+```{r zadanie4_decompose_add_reszty, fig.cap="Analiza reszt - model addytywny"}
+reszty_add <- dekomp_add$random
+ggtsdisplay(na.omit(reszty_add), main = "Reszty (Zt) - Model Addytywny (decompose)")
+```
+
+\newpage
+
+**Model multiplikatywny**
+
+```{r zadanie4_decompose_mult, fig.width=10, fig.height=8, fig.cap="Dekompozycja multiplikatywna (decompose)"}
+dekomp_mult <- decompose(bezrobocie, type = "multiplicative")
+autoplot(dekomp_mult) +
+  labs(title = "Dekompozycja multiplikatywna") +
+  theme_minimal()
+```
+
+```{r zadanie4_decompose_mult_reszty, fig.cap="Analiza reszt - model multiplikatywny"}
+reszty_mult <- dekomp_mult$random
+ggtsdisplay(na.omit(reszty_mult), main = "Reszty (Zt) - Model Multiplikatywny (decompose)")
+```
+
+**Porównanie:** Model addytywny dostarcza lepszych i bardziej stacjonarnych reszt (mniejsze wahania, jednorodna wariancja) niż model multiplikatywny, co potwierdza wnioski z analizy wstępnej o addytywnym charakterze szeregu.
+
+\newpage
+
+## Dekompozycja na podstawie modelu regresji (tslm)
+
+### Model z trendem liniowym
+
+```{r zadanie4_tslm_lin}
+tslm_lin <- tslm(bezrobocie ~ trend + season)
+summary(tslm_lin)
+```
+
+```{r zadanie4_tslm_lin_reszty, fig.cap="Reszty - trend liniowy + sezonowość"}
+ggtsdisplay(residuals(tslm_lin), main = "Reszty - Trend Liniowy + Sezonowość (tslm)")
+```
+
+### Model z trendem kwadratowym
+
+```{r zadanie4_tslm_kwad}
+tslm_kwad <- tslm(bezrobocie ~ trend + I(trend^2) + season)
+summary(tslm_kwad)
+```
+
+```{r zadanie4_tslm_kwad_reszty, fig.cap="Reszty - trend kwadratowy + sezonowość"}
+ggtsdisplay(residuals(tslm_kwad), main = "Reszty - Trend Kwadratowy + Sezonowość (tslm)")
+```
+
+### Porównanie dopasowania modeli
+
+```{r zadanie4_tslm_porownanie, fig.cap="Porównanie modeli regresyjnych"}
+autoplot(bezrobocie, series="Szereg oryginalny") +
+  autolayer(fitted(tslm_lin), series="Trend liniowy + sezonowość") +
+  autolayer(fitted(tslm_kwad), series="Trend kwadratowy + sezonowość") +
+  labs(title = "Porównanie dopasowania modeli TSLM",
+       y = "Stopa bezrobocia (%)") +
+  theme_minimal()
+```
+
+### Model z transformacją Box-Cox
+
+```{r zadanie4_tslm_log}
+tslm_log_kwad <- tslm(bezrobocie ~ trend + I(trend^2) + season, lambda = 0)
+summary(tslm_log_kwad)
+```
+
+```{r zadanie4_tslm_log_reszty, fig.cap="Reszty - trend kwadratowy + sezonowość (dane zlogarytmowane)"}
+ggtsdisplay(residuals(tslm_log_kwad), 
+            main = "Reszty - Trend Kwadratowy + Sezonowość (log. dane)")
+```
+
+**Wnioski z analizy TSLM:**
+
+Porównanie jakości dopasowania modeli
+
+*Model liniowy:*
+
+- \(R^2 =\) `r round(summary(tslm_lin)$r.squared, 4)`
+
+- skorygowane \(R^2 =\) `r round(summary(tslm_lin)$adj.r.squared, 4)`
+
+- AIC = `r round(AIC(tslm_lin), 2)`
+
+- BIC = `r round(BIC(tslm_lin), 2)`
+
+*Model kwadratowy:*
+
+- \(R^2 =\) `r round(summary(tslm_kwad)$r.squared, 4)`
+
+- skorygowane \(R^2 =\) `r round(summary(tslm_kwad)$adj.r.squared, 4)`
+
+- AIC = `r round(AIC(tslm_kwad), 2)`
+
+- BIC = `r round(BIC(tslm_kwad), 2)`
+
+**Test ANOVA porównujący modele zagnieżdżone**
+
+```{r zadanie4_tslm_porownanie_stat}
+print(anova(tslm_lin, tslm_kwad))
+```
+
+- Mimo wyższego \(R^2 = 0{,}3978\) dla modelu kwadratowego, skorygowane \(R^2 = 0{,}3498\) oraz kryteria informacyjne (AIC/BIC) przemawiają na korzyść modelu liniowego, ponieważ nie oferuje on istotnej poprawy kosztem dodatkowego parametru.  
+  Wartości \(R^2\) są relatywnie niskie (około \(0{,}40\), co oznacza, że modele regresyjne z prostymi trendami parametrycznymi nie wyjaśniają pełnej zmienności szeregu `bezrobocie`.
+
+- Niskie wartości \(R^2\) wynikają z faktu, że trend w tym szeregu jest wysoce nieregularny i nieliniowy, co utrudnia jego parametryczną aproksymację prostym wielomianem.
+
+- Test ANOVA (\(p\text{-value} = 0{,}7195\)) wskazuje, że dodanie składnika kwadratowego do modelu jest statystycznie nieistotne, co potwierdza, że bardziej złożony model regresyjny nie jest uzasadniony.
+
+- Transformacja logarytmiczna (\(\lambda = 0\)) nie poprawia znacząco jakości dopasowania, co potwierdza addytywny charakter szeregu oraz fakt, że optymalne \(\lambda\) jest bliskie 1 (\(\lambda_{\text{opt}} = 1{,}02\)).
+
+
+\newpage
+
+## Dekompozycja STL
+
+### Model z sezonowością okresową
+
+```{r zadanie4_stl_periodic, fig.width=10, fig.height=8, fig.cap="Dekompozycja STL - sezonowość okresowa"}
+s <- frequency(bezrobocie)
+dekomp_stl_periodic <- stl(bezrobocie, s.window = "periodic")
+autoplot(dekomp_stl_periodic) +
+  labs(title = "Dekompozycja STL (s.window = 'periodic')") +
+  theme_minimal()
+```
+
+### Model z sezonowością zmienną w czasie
+
+```{r zadanie4_stl_zmienna, fig.width=10, fig.height=8, fig.cap="Dekompozycja STL - sezonowość zmienna"}
+dekomp_stl_zmienna <- stl(bezrobocie, s.window = 13)
+autoplot(dekomp_stl_zmienna) +
+  labs(title = "Dekompozycja STL (s.window = 13)") +
+  theme_minimal()
+```
+
+### Model z silnym wygładzaniem trendu
+
+```{r zadanie4_stl_trend, fig.width=10, fig.height=8, fig.cap="Dekompozycja STL - silne wygładzanie trendu"}
+dekomp_stl_trend_szybki <- stl(bezrobocie, s.window = 13, t.window = 7)
+autoplot(dekomp_stl_trend_szybki) +
+  labs(title = "Dekompozycja STL (s.window = 13, t.window = 7)") +
+  theme_minimal()
+```
+
+```{r zadanie4_stl_reszty, fig.cap="Reszty - dekompozycja STL"}
+reszty_stl <- remainder(dekomp_stl_zmienna)
+ggtsdisplay(reszty_stl, main = "Reszty (Zt) - Dekompozycja STL")
+```
+
+**Wnioski dotyczące parametrów STL:**
+
+- Mniejsze wartości s.window i t.window pozwalają na szybsze zmiany odpowiednio składowej sezonowej i trendu.
+- Model ze zmienną sezonowością (s.window = 13) może lepiej uchwyć ewentualne zmiany charakteru sezonowości w czasie.
+- Metoda STL dobrze radzi sobie z nieregularnym trendem dzięki użyciu LOESS.
+
+\newpage
+
+## Eliminacja trendu i sezonowości przez różnicowanie
+
+**Różnicowanie sezonowe**
+
+```{r zadanie4_diff_seas, fig.cap="Szereg po różnicowaniu sezonowym"}
+s <- 12
+bezrobocie_seas_diff <- diff(bezrobocie, lag = s)
+ggtsdisplay(bezrobocie_seas_diff, main = "Po różnicowaniu sezonowym (s=12)")
+```
+
+```{r zadanie4_diff_seas_test}
+test_seas <- Box.test(bezrobocie_seas_diff, type="Ljung-Box", lag=floor(length(bezrobocie_seas_diff)/4))
+print(test_seas)
+```
+
+**Podwójne różnicowanie (sezonowe + zwykłe)**
+
+```{r zadanie4_diff_total, fig.cap="Szereg po podwójnym różnicowaniu"}
+bezrobocie_total_diff <- diff(bezrobocie_seas_diff, lag = 1)
+ggtsdisplay(bezrobocie_total_diff, 
+            main = "Po różnicowaniu sezonowym (s=12) i zwykłym (d=1)")
+```
+
+```{r zadanie4_diff_total_test}
+test_total <- Box.test(bezrobocie_total_diff, type="Ljung-Box", 
+                       lag=floor(length(bezrobocie_total_diff)/4))
+print(test_total)
+```
+
+\newpage
+
+## Porównanie wszystkich metod
+
+**Porównanie funkcji ACF**
+
+```{r zadanie4_porownanie_acf, fig.width=10, fig.height=8}
+# Przygotowanie danych
+reszty_add_omit <- na.omit(dekomp_add$random)
+reszty_tslm <- residuals(tslm_kwad)
+reszty_stl <- remainder(dekomp_stl_zmienna)
+bezrobocie_total_diff_omit <- na.omit(bezrobocie_total_diff)
+
+par(mfrow=c(2, 2))
+Acf(reszty_add_omit, main = "ACF Reszty (Decompose Add.)")
+Acf(reszty_tslm, main = "ACF Reszty (TSLM Kwad.)")
+Acf(reszty_stl, main = "ACF Reszty (STL)")
+Acf(bezrobocie_total_diff_omit, main = "ACF (Różnicowanie x2)")
+```
+
+**Statystyki porównawcze**
+
+```{r zadanie4_statystyki1}
+reszty_add_omit <- na.omit(reszty_add)
+reszty_tslm <- residuals(tslm_kwad)
+reszty_stl <- reszty_stl
+bezrobocie_total_diff_omit <- na.omit(bezrobocie_total_diff)
+
+# trend + I(trend^2) + 11 zmiennych sezonowych + intercept = 14 parametrów
+fitdf_tslm <- length(coef(tslm_kwad))
+```
+
+Liczba parametrów w modelu TSLM (kwadratowy): `r fitdf_tslm`
+
+```{r zadanie4_statystyki2}
+
+lag_test <- 20
+
+# Obliczenie statystyk - wszystkie w tej samej skali
+statystyki <- data.frame(
+  Metoda = c("Decompose (Add.)", "TSLM (Kwad.)", "STL", "Różnicowanie (x2)"),
+  N_obs = c(
+    length(reszty_add_omit),
+    length(reszty_tslm),
+    length(reszty_stl),
+    length(bezrobocie_total_diff_omit)
+  ),
+  Srednia = c(
+    mean(reszty_add_omit),
+    mean(reszty_tslm),
+    mean(reszty_stl),
+    mean(bezrobocie_total_diff_omit)
+  ),
+  Wariancja = c(
+    var(reszty_add_omit),
+    var(reszty_tslm),
+    var(reszty_stl),
+    var(bezrobocie_total_diff_omit)
+  ),
+  Odch_std = c(
+    sd(reszty_add_omit),
+    sd(reszty_tslm),
+    sd(reszty_stl),
+    sd(bezrobocie_total_diff_omit)
+  )
+)
+
+# Obliczenie MSE w stosunku do wariancji szeregu oryginalnego
+var_oryginal <- var(bezrobocie)
+statystyki$MSE_relative <- statystyki$Wariancja / var_oryginal
+
+# Testy Ljung-Boxa z odpowiednią korektą stopni swobody
+test_add <- Box.test(reszty_add_omit, type="Ljung-Box", lag=lag_test, fitdf=0)
+test_tslm <- Box.test(reszty_tslm, type="Ljung-Box", lag=lag_test, fitdf=fitdf_tslm)
+test_stl <- Box.test(reszty_stl, type="Ljung-Box", lag=lag_test, fitdf=0)
+test_diff <- Box.test(bezrobocie_total_diff_omit, type="Ljung-Box", lag=lag_test, fitdf=0)
+
+statystyki$pvalue_LB <- c(
+  test_add$p.value,
+  test_tslm$p.value,
+  test_stl$p.value,
+  test_diff$p.value
+)
+
+statystyki$df_LB <- c(
+  test_add$parameter,
+  test_tslm$parameter,
+  test_stl$parameter,
+  test_diff$parameter
+)
+
+statystyki$fitdf <- c(0, fitdf_tslm, 0, 0)
+
+#for(i in 1:nrow(statystyki)) {
+#  cat(sprintf("%s: p-value = %.6f (lag=%d, fitdf=%d, df=%d)\n", 
+#              statystyki$Metoda[i], 
+#              statystyki$pvalue_LB[i],
+#              lag_test,
+#              statystyki$fitdf[i],
+#              statystyki$df_LB[i]))
+```
+
+**Wyniki testu Ljunga-Boxa dla różnych metod przekształcania szeregu**
+
+```{r zadanie4_statystyki4}
+# Tabela do wyświetlenia
+statystyki_display <- statystyki[, c("Metoda", "N_obs", "Wariancja", "Odch_std", 
+                                      "MSE_relative", "pvalue_LB", "fitdf")]
+
+kable(statystyki_display, 
+      digits = c(0, 0, 4, 4, 4, 6, 0), 
+      caption = "Porównanie statystyk reszt dla różnych metod dekompozycji",
+      col.names = c("Metoda", "N", "Wariancja", "Odch. std.", "MSE/Var(Y)", 
+                    "p-value (LB)", "fitdf")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+**Interpretacja Tabeli:**
+
+**1. Różnica w wariancji i elastyczności modelu**
+
+- **Różnica skali wariancji**:  
+  Wariancja reszt modelu TSLM (\(\approx 6{,}02\)) jest znacznie wyższa niż wariancja reszt metod Decompose (\(\approx 0{,}04\)) i STL (\(\approx 0{,}04\)).
+
+- **Przyczyna**:  
+  `bezrobocie` charakteryzuje się nieregularnym trendem długoterminowym.  
+  ◦ Model TSLM z trendem wielomianowym (parametryczny) ma małą elastyczność i nie jest w stanie efektywnie dopasować się do nieregularnego trendu.  
+  ◦ Metody Decompose (oparta na ruchomej średniej) oraz STL (oparta na LOESS – lokalnie ważonej regresji wielomianowej) są metodami nieparametrycznymi, które lepiej dopasowują się do lokalnych, zmiennych trendów.
+
+---
+
+**2. Względna miara wyjaśnionej zmienności (\(\text{MSE} / \text{Var}(Y)\))**
+
+- Miara \(\text{MSE} / \text{Var}(Y)\) określa ułamek niewyjaśnionej zmienności szeregu.
+
+- Dla metod Decompose (addytywna) i STL, wskaźnik \(\text{MSE} / \text{Var}(Y) \approx 0{,}004\), co oznacza, że te metody wyjaśniły ponad 99% zmienności szeregu (usuwając trend i sezonowość).
+
+- Dla modelu TSLM (kwadratowego), wskaźnik \(\text{MSE} / \text{Var}(Y) = 0{,}6022\), co oznacza, że model ten wyjaśnił jedynie około 40% zmienności (\(1 - 0{,}6022 = 0{,}3978\)).
+
+---
+
+**3. Test Ljunga–Boxa**
+
+- Dla modelu TSLM zastosowano korektę stopni swobody uwzględniającą liczbę oszacowanych parametrów (\(\text{fitdf} = 14\)).
+
+- Niskie wartości \(p\text{-value} \leq 10^{-6}\) dla wszystkich metod wskazują, że resztowe szeregi nie są białym szumem.
+
+- To oznacza, że w resztach pozostała słaba struktura zależności (autokorelacja), ale niekoniecznie świadczy o niepowodzeniu dekompozycji — ponieważ trend i sezonowość (składowe deterministyczne) zostały usunięte. Reszty powinny być teraz stacjonarnym szumem.
+
+---
+
+**4. Najlepsza dekompozycja**
+
+- Metody STL i Decompose (addytywna) osiągnęły najniższą wariancję reszt (odpowiednio \(0{,}0377\) i \(0{,}0388\)) oraz najwyższy współczynnik wyjaśnionej zmienności (\(\approx 99{,}6\%\)).
+
+- Biorąc pod uwagę fakt, że STL najlepiej radzi sobie z nieregularnym trendem, jest ona uznawana za **optymalny wybór** dla `bezrobocie`.
+
+## Wnioski końcowe
+
+### Ocena jakości dekompozycji  
+
+Na podstawie przeprowadzonej analizy można sformułować następujące wnioski:
+
+1. **Decompose (addytywna):** Daje bardzo dobre wyniki (wariancja reszt \(\approx 0.0388\)), co potwierdza addytywny charakter szeregu — stabilną amplitudę sezonowości i wahań losowych. Metoda jest szybka i prosta w implementacji, a wyjaśnia ponad 99.6% zmienności szeregu.
+
+2. **TSLM:** Najgorsze dopasowanie: wariancja reszt \(\approx 6.02\) i \(R^2\) \(\approx 0.40\), co oznacza wyjaśnienie jedynie około 40% zmienności szeregu. Trend wielomianowy jest zbyt mało elastyczny, by uchwycić nieregularne zmiany bezrobocia. Test ANOVA (p=0.7195) pokazuje, że człon kwadratowy nie poprawia istotnie modelu, a skorygowane \(R^2\) (0.3498) jest niższe niż dla modelu liniowego (0.3533).
+
+3. **STL:** Najbardziej elastyczna i najlepiej dopasowana metoda. Najniższa wariancja reszt (\(\approx 0.0377\)) oznacza, że wyjaśnia ponad 99.6% zmienności. Reszty mają minimalną autokorelację, co świadczy o skutecznej izolacji trendu i sezonowości. STL jest też odporny na obserwacje odstające i pozwala na elastyczne dopasowanie do lokalnych zmian trendu dzięki metodzie LOESS.
+
+4. **Różnicowanie:** Skutecznie usuwa niestacjonarność: po różnicowaniu sezonowym i zwykłym ACF szybko zanika (wariancja \(\approx 0.0843\), wyjaśnienie 99.2% zmienności). Wadą jest utrata interpretowalności składowych i konieczność odwracania operacji przy prognozowaniu.
+
+**Podsumowanie:** STL jest najkorzystniejszą metodą dla tego szeregu: najlepiej uchwytuje nieliniowy trend i sezonowość, tworząc reszty o najniższej wariancji i niemal idealnej stacjonarności. Dodatkowo analiza potwierdza, że transformacja Boxa–Coxa nie jest potrzebna (optymalne  \(\lambda \approx 1.02\), blisko wartości addytywnego modelu). 
+
+### Stacjonarność reszt   
+
+Szereg reszt można uznać za realizację szeregu stacjonarnego, jeśli:       
+
+- Brak regularnych wzorców (trendów, sezonowości)
+- Wariancja jest jednorodna w czasie
+- Funkcja ACF zanika szybko do zera
+
+**Rozstrzygnięcie stacjonarności:** Na podstawie przeprowadzonej analizy:
+
+- **Najniższą wariancję reszt** osiągnięto dla metod **decompose (addytywna)** i **STL** (\(\approx 0.037-0.038\))
+- **Najwyższy procent wyjaśnionej zmienności** (>99.6%): decompose i STL
+- **STL** zapewnia najlepszą równowagę między jakością dekompozycji a elastycznością dopasowania do nieregularnego trendu
+- **Różnicowanie** jest najbardziej skuteczne w eliminacji niestacjonarności (najszybciej zanikająca ACF), wyjaśnia 99.2% zmienności, ale kosztem utraty interpretacji składowych
+- **TSLM** w tym przypadku jest najmniej efektywny - wariancja reszt ponad 150-krotnie wyższa niż decompose/STL, wyjaśnia jedynie około 40% zmienności
+
+**Uwaga o testach autokorelacji:** Wszystkie metody wykazują niskie p-values w teście Ljung-Boxa (<0.001), co wskazuje na pozostałą słabą strukturę zależności. Nie dyskwalifikuje to metod dekompozycji - kluczowe jest:
+
+- Usunięcie trendu i sezonowości (głównych źródeł niestacjonarności)
+
+- Niska wariancja reszt - najlepsze dla decompose/STL
+
+- Brak systematycznych wzorców w resztach
+
+- Stabilna wariancja w czasie
+
+Pozostała autokorelacja może wynikać z krótkoterminowych zależności nieprzechwyconych przez proste modele dekompozycji co jest typowe w rzeczywistych danych ekonomicznych.
+
+### Transformacja Box-Cox
+
+Optymalne lambda bliskie 1 \((\lambda \approx 1{,}02)\) oraz analiza reszt z modelu z transformacją logarytmiczną potwierdzają, że:
+
+- Szereg bezrobocie ma charakter **addytywny** - amplituda wahań sezonowych nie zależy od poziomu szeregu
+- Transformacja Box-Cox nie poprawia istotnie jakości dopasowania modeli
+- W tym przypadku nie jest konieczne stosowanie transformacji stabilizującej wariancję
+- Model z lambda=0 (logarytm) został przetestowany jedynie dla celów porównawczych, mimo że optymalne lambda nie wskazywało na konieczność transformacji
+
+**Praktyczna interpretacja:** Dla szeregów z \(\lambda\) w przedziale [0.9, 1.1] nie ma zwykle istotnej różnicy między modelami addytywnymi a multiplikatywnymi, i preferujemy prostsze modele addytywne ze względu na łatwiejszą interpretację.
+
+### Wybór metody w praktyce
+
+Wybór metody dekompozycji zależy od celu analizy i charakterystyki szeregu:   
+
+**Gdy trend jest nieregularny (jak w przypadku bezrobocia):**    
+
+- **Do analizy składowych i prognozowania:** STL (najlepsza elastyczność, LOESS dostosowuje się lokalnie, wariancja reszt \(\approx 0.038\))
+
+- **Dla prostoty i szybkości:** decompose (addytywna) - prosta metoda dająca bardzo dobre wyniki (wariancja reszt \(\approx 0.039\))
+
+- **Do eliminacji niestacjonarności przed modelowaniem ARIMA:** różnicowanie (najprostsza transformacja, ale bez bezpośredniej interpretacji składowych)
+
+- **NIE zalecane:** TSLM - zbyt sztywny model dla nieregularnego trendu (wariancja reszt >150x wyższa, wyjaśnia tylko 40% zmienności)
+
+**Gdy trend jest regularny i można go aproksymować wielomianem:**
+
+- **TSLM** staje się użyteczny - łatwa ekstrapolacja i interpretacja parametrów
+
+- Nadal warto porównać z metodami nieparametrycznymi jako benchmark
+
+**Ogólne zalecenia:**
+
+- Zawsze zaczynać od eksploracyjnej analizy graficznej (wykres szeregu, seasonplot, ACF)
+
+- Testować transformację Box-Cox jeśli \(\lambda \approx 1\), szereg jest addytywny
+
+- Dla szeregów addytywnych preferować decompose lub STL
+
+- Porównywać metody na podstawie wariancji reszt i procentu wyjaśnionej zmienności (1 - MSE/Var(Y))
+
+- Sprawdzać reszty: wykresy, ACF, testy Ljung-Boxa z odpowiednim fitdf dla modeli parametrycznych
+
+**Dla** ***bezrobocie***: Optymalna metoda to **STL** lub **decompose (addytywna)**, które osiągają:
+
+- Wariancję reszt <0.04 (TSLM: 6.02, tj. >150x gorzej)
+
+- Wyjaśnienie >99.6% zmienności (TSLM: ~40%)
+
+- Elastyczne dopasowanie do nieregularnego trendu bez konieczności specyfikacji parametrycznej postaci
+
+# Podsumowanie
+
+***Zadanie 3 - Kluczowe wnioski***
+
+1. **Test graficzny** (ACF) jest intuicyjnym narzędziem do szybkiej oceny białoszumowości, ale wymaga subiektywnej interpretacji.
+
+2. **Testy formalne** (Box-Pierce, Ljung-Box) dostarczają obiektywnej, statystycznej oceny hipotezy o białoszumowości poprzez konkretną wartość p-value.
+
+3. **Test Ljunga-Boxa** jest preferowany w praktyce ze względu na lepsze własności dla małych prób - jego empiryczny rozmiar jest bliższy nominalnemu poziomowi $\alpha$=0.05, choć dla bardzo małych prób (n<=30) może wykazywać tendencję do liberalności.
+
+4. **Test Boxa-Pierce'a** jest konserwatywny dla małych prób (zbyt rzadko odrzuca \(H_0\)), co obniża jego moc, ale zapewnia lepszą kontrolę błędu I rodzaju.
+
+5. Oba podejścia (graficzne i formalne) są **komplementarne** i warto stosować je łącznie: najpierw analiza ACF/PACF dla rozpoznania typu zależności, następnie test formalny dla statystycznego potwierdzenia.
+
+6. Wybór maksymalnego opóźnienia $h_{max}$ ma istotny wpływ na wyniki testów - zalecana reguła to $h_{max} = \lfloor \ln(n) \rfloor$ lub $h_{max} = \lfloor n/4 \rfloor$ dla szeregów sezonowych.
+
+***Zadanie 4 - Kluczowe wnioski***
+
+1. ***bezrobocie*** charakteryzuje się nieregularnym trendem długoterminowym i wyraźną sezonowością roczną o charakterze addytywnym.
+
+2. **Porównanie metod dekompozycji - jakość dopasowania:**
+
+   - **STL i decompose (addytywna)**: najniższa wariancja reszt (\(\approx\)0.037-0.038), wyjaśniają >99.6% zmienności
+   
+   - **Różnicowanie**: wariancja reszt \(\approx 0.084\), wyjaśnia 99.2% zmienności, najskuteczniejsze w eliminacji niestacjonarności, ale bez interpretacji składowych
+   
+   - **TSLM**: \(R^2\) \(\approx 0.40\), wariancja reszt \(\approx 6.02\) (ponad 150x wyższa niż decompose/STL), wyjaśnia tylko około 40% zmienności
+   
+   - **Ranking efektywności**: STL \(\approx \) decompose (addytywna) > różnicowanie >> TSLM
+
+3. **Przyczyny słabego dopasowania TSLM:**
+
+   - Sztywna, parametryczna forma trendu (wielomian stopnia 1 lub 2) nie dopasowuje się do nieregularnego trendu bezrobocia
+   
+   - Model kwadratowy: mimo wyższego \(R^2\) (0.3978), skorygowane \(R^2\) (0.3498) jest **niższe** niż dla modelu liniowego (0.3533)
+   
+   - Test ANOVA (p=0.7195) potwierdza, że dodanie składnika kwadratowego jest statystycznie nieistotne
+   
+   - Kryteria informacyjne (AIC, BIC) również faworyzują prostszy model liniowy
+   
+   - Metody nieparametryczne (decompose, STL) są znacznie elastyczniejsze dla tego typu danych
+   
+
+4. **Transformacja Box-Cox:** Optymalne \(\lambda \approx 1.02\) potwierdza addytywny charakter szeregu - transformacja nie poprawia jakości dopasowania.
+
+5. **Testy autokorelacji reszt:** 
+
+   - Wszystkie metody wykazują pozostałą autokorelację (p-value <0.001 w teście Ljung-Boxa)
+   
+   - Dla TSLM zastosowano korektę fitdf=14 (liczba parametrów modelu)
+   
+   - Pozostała autokorelacja nie dyskwalifikuje metod dekompozycji - główne składowe (trend, sezonowość) zostały skutecznie usunięte, co potwierdzają niska wariancja reszt i brak systematycznych wzorców
+
+6. **Rekomendacja:** Dla szeregu bezrobocie optymalne są metody **decompose (addytywna)** lub **STL** ze względu na:
+
+   - Najwyższą efektywność wyjaśniania zmienności (>99.6%)
+   
+   - Najniższą wariancję reszt (<0.04)
+   
+   - Elastyczne dopasowanie do nieregularnego trendu
+   
+   - STL ma dodatkową zaletę odporności na obserwacje odstające
+
+\newpage
+
+# Bibliografia i źródła
+
+- Hyndman, R.J., & Athanasopoulos, G. (2018). *Forecasting: principles and practice*, 2nd edition, OTexts: Melbourne, Australia. OTexts.com/fpp2.
+
+- Box, G. E. P., & Pierce, D. A. (1970). Distribution of residual autocorrelations in autoregressive-integrated moving average time series models. *Journal of the American Statistical Association*, 65(332), 1509-1526.
+
+- Pakiet **forecast** dla R: Hyndman R, et al. (2023). forecast: Forecasting functions for time series and linear models. R package.
+
+- Pakiet **TSAFBook**: Materiały do zajęć z Analizy Szeregów Czasowych, Politechnika Wrocławska. (Analiza i prognozowanie szeregów czasowych. Praktyczne wprowadzenie na podstawie środowiska R”, A. Zagdański, A. Suchwałko, PWN, 2015, ISBN 978-83-01-18356-1)
+
+---
