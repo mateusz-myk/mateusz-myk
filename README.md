@@ -1,16 +1,19 @@
-## Hi there 👋
+# Portfolio Analityczne – Projekty Statystyczne i Optymalizacyjne
 
-<!--
-**mateusz-myk/mateusz-myk** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+Witaj w moim repozytorium! Znajdują się tutaj projekty z zakresu analizy danych, statystyki matematycznej oraz badań operacyjnych, realizowane w językach **R**, **Python**, Cpp.
 
-Here are some ideas to get you started:
+## 📂 Struktura Projektów
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+Repozytorium zostało podzielone na sekcje tematyczne, z których każda zawiera pełną dokumentację oraz kody źródłowe:
+
+---
+## 🛠️ Wykorzystane Narzędzia
+* **Języki:** R, Python
+* **Raportowanie:** R Markdown (PDF/HTML), Jupyter Notebooks
+* **Główne biblioteki:** * `R`: forecast, ggplot2, knitr, patchwork
+  * `Python`: pulp, pandas, numpy
+
+## 👤 Kontakt
+**Mateusz Wizner**
+* Student Analityki Gospodarczej / Metod Ilościowych
+* [Twój profil LinkedIn - opcjonalnie]
