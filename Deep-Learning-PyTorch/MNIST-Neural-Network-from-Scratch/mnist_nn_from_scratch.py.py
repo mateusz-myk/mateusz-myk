@@ -1,7 +1,3 @@
-# Zadanie 2
-# Mateusz Wizner
-# numer indeksu 277508
-
 import numpy as np
 import mnist_loader
 import urllib.request
