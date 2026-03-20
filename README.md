@@ -27,6 +27,6 @@ Witaj! To moje repozytorium portfolio, zawierające różnorodne projekty z dzie
 ## Kontakt
 - GitHub: mateusz-myk
 - Lokalizacja: Wrocław, Polska
-- Studia: Matematyka Politechnika Wrocławska
+- Studia: Matematyka 3 rok Politechnika Wrocławska
 
 Repo aktywnie rozwijane.
