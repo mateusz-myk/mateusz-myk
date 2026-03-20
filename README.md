@@ -20,6 +20,17 @@ Witaj! To moje repozytorium portfolio, zawierające różnorodne projekty z dzie
 | R/Statystyka | Survival Analysis, Time Series |
 | Symulacje | 3-Body Problem Simulator |
 
+
+## Projekty
+| Kategoria | Link |
+|-----------|------|
+| ML/Deep Learning | [CIFAR-10 CNN](./ML-Deep%20Learning/CIFAR-10_CNN_Analysis/) [file:37] |
+| Gry/AI | [Tic-Tac-Toe MCTS](./ML-Deep%20Learning/Tic-Tac-Toe_MCTS/) |
+| C++/C# | [Binary Trees](./Software_Development_Cpp/Binary_Tree_Operations_(C++)/) |
+| R/Statystyka | [Survival Analysis](./R/Survival_analysis/) |
+| Symulacje | [3-Body Problem](./3-Body_Problem_Simulator/) |
+
+
 ## Jak używać
 - Każdy folder ma własny README.md z opisem
 - Licencja: MIT (używać swobodnie z podaniem autora)
