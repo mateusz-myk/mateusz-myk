@@ -1,0 +1,1376 @@
+---
+title: "Sprawozdanie 3"
+author: "Mateusz Wizner"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    toc_depth: 3
+    number_sections: true
+  html_document:
+    toc: true
+    toc_depth: '3'
+    df_print: paged
+header-includes:
+- \usepackage[OT4]{polski}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+- \usepackage{xcolor}
+- \definecolor{myblue}{HTML}{D0E9F9}
+- \definecolor{myyellow}{HTML}{FFFACD}
+subtitle: Eksploracja danych
+fontsize: 12pt
+---
+
+```{r setup, include=FALSE}
+#USTAWIENIA DO PROJEKTU 
+### echo = FALSE (Nie wypisuje kodu przy egzekucji programu)
+### message = FALSE (Nie wyświetla jakiś powiadomień)
+### warning = Flase (Nie wyświetla błędów jak się pojawią)
+#---------------------------------------------------------
+knitr::opts_chunk$set(echo = FALSE,message = FALSE, warning = FALSE )
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "", fig.align = "center")
+#---------------------------------------------------------
+```
+
+```{r biblioteki}
+# POTRZEBNE BIBLIOTEKI
+#---------------------------------------------------------
+library(datasets) 
+library(knitr)
+library(kableExtra)
+library(gridExtra)
+library(ggplot2)
+library(corrplot)
+library(dplyr)
+library(patchwork)
+library(MASS)
+library(HDclassif)
+library(tidyr)
+library(rlang)
+library(caret)
+library(class)
+library(rpart)
+library(e1071)
+library(reshape2)
+#---------------------------------------------------------
+```
+
+```{r kolory}
+# Pastelowe kolory (HEX)
+#---------------------------------------------------------
+pblue    <- "#AEC6CF"
+pgreen   <- "#BFD8B8"
+ppurple  <- "#CBAACB"
+porange  <- "#FFD8B1"
+pyellow  <- "#FFFACD"
+ppink    <- "#FBB1BD"
+pgray    <- "#D3D3D3"
+pmint    <- "#C1E1C1"
+#---------------------------------------------------------
+
+```
+
+\newpage
+
+# Zadanie 1
+
+## a) **Analizowane dane**
+
+Zbiór danych Iris to klasyczny zestaw danych w statystyce i uczeniu maszynowym, wprowadzony przez R.A. Fishera w 1936 roku. Zawiera 150 obserwacji kwiatów z trzech gatunków ( \colorbox{myyellow}{K=3 klasy} ) irysa: setosa, versicolor i virginica.
+
+Każdy rekord opisuje pojedynczy kwiat za pomocą czterech cech numerycznych ( \colorbox{myblue}{p=4 cechy ilościowe} ) :
+
+-   Sepal.Length – długość działki kielicha (w cm)
+-   Sepal.Width – szerokość działki kielicha (w cm)
+-   Petal.Length – długość płatka (w cm)
+-   Petal.Width – szerokość płatka (w cm)
+
+Przykładowe **3 wiersze** z danych iris
+
+```{r data_import_iris}
+
+#WYPISYWANIE PRZYKŁADOWYCH DANYCH ZE ZBIORU IRIS
+#---------------------------------------------------------
+data(iris)
+
+iris_data <- iris
+
+iris_sample <- iris %>%
+  group_by(Species) %>%
+  slice(1) %>%    # pierwszy wiersz z każdej grupy
+  ungroup()
+
+
+kable(iris_sample, format = "latex", booktabs = TRUE) %>%
+  row_spec(0, background = c(rep("#D0E9F9", 4), "#FFFACD"))  # 0 oznacza wiersz nagłówka
+#---------------------------------------------------------
+
+```
+
+Liczebność klas w danym zbiorze
+
+```{r species_frequency}
+#OBLCIZANIE ORAZ RYSOWANIE CZĘSTOŚCI WYSTĘPOWANIA POSZCZEGÓLNYCH GATUNKÓW W DANYM ZBIORZE
+#---------------------------------------------------------
+counts <- iris_data %>%
+  count(Species)
+
+ggplot(counts, aes(x = Species, y = n, fill = Species)) +
+  geom_bar(stat = "identity", alpha = 0.8) +
+  scale_fill_manual(values = c(ppink,pgreen,pblue)) +
+  labs(title = "Liczebność każdego gatunku irysa",
+       x = "Gatunek",
+       y = "Liczba obserwacji") +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5)  # wyśrodkowanie tytułu
+  )
+#---------------------------------------------------------
+```
+
+Mamy równy podział danych w zbiorze. Obserwacji każdego gatunku jest 50.
+
+\newpage
+
+## b) **Podział danych na zbiór uczący i testowy**
+
+Dane zostały podzielone tak, aby zachować proporcje poszczególnych klas **(każda klasa zajmuje ok33% wszystkich danych)**, dzięki czemu zbiór uczący zawiera **reprezentatywną i równomierną próbkę wszystkich klas.**
+
+```{r data_partioning}
+#USTAWIENIE SEEDU, DO LOSOWANIA DANYCH (NIE ZMIENIAĆ , SPRAWOZDANIE JEST PRZYGOTOWANE POD TEN SEED, I WYNIKI MOGĄ SIĘ ZNACZNIE RÓŻNIC W ZALEŻNOŚCI OD DOBRANEGO SEEDU)
+#---------------------------------------------------------
+set.seed(123)
+#---------------------------------------------------------
+
+#TWORZĘ TRAIN SET Z ZACHOWANIE PROPORCJI
+#---------------------------------------------------------
+train_set <- iris %>%
+  group_by(Species) %>%
+  sample_frac(1/3) %>%
+  ungroup()
+#---------------------------------------------------------
+
+#TWORZĘ TEST SET Z POZOSTAŁYCH DANYCH
+#---------------------------------------------------------
+test_set <- anti_join(iris, train_set, by = c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width", "Species"))
+#---------------------------------------------------------
+
+```
+
+Po takim podziale **zbiór uczący zawiera** $\frac{1}{3}$ danych, a **zbiór testowy zawiera** $\frac{2}{3}$ wszystkich danych.
+
+```{r mini wizualizacja}
+
+#MINI WYKRES PRZEDSTAWIAJĄCY PROPORCJĘ DANYCH
+#---------------------------------------------------------
+df <- data.frame(
+  set = c("train_set", "test_set"),
+  value = c(1, 2)
+)
+
+ggplot(df, aes(x = set, y = value,fill = set)) +
+  geom_col( width = 0.6) +
+  scale_fill_manual(values = c(train_set = ppurple,test_set =pblue)) +
+  theme_void() +  # usuwa tło, siatki, osie
+  theme(
+    axis.text.x = element_text(size = 12, color = "black", vjust = 2),  # podpisy pod słupkami
+    plot.margin = margin(20, 20, 20, 20)
+  )
+#---------------------------------------------------------
+
+
+```
+
+\newpage
+
+## c) **Konstrukcja klasyfikatora i wyznaczenie prognoz**
+
+### Inicjalizacja klasyfikatora
+
+-   Na początek wyznaczamy macierz modelu (macierze eksperymentu), zawierającą wartości poszczególnych zmiennych (dla odpowiednio danych testowych oraz uczących)
+
+**X1 - macierz dla danych testowych** **X2 - macierz dla danych trenujących**
+
+```{r macierz,echo = TRUE}
+K=3
+p = 4
+n1= 99
+n2 = 51
+# X1 - macierz eksperymentu (ang. design matrix) dla danych TESTOWYCH
+X1 <- cbind(rep(1,99), test_set[,1:4])
+X1 <- as.matrix(X1)
+
+# X2 - macierz eksperymentu (ang. design matrix) dla danych UCZĄCYCH
+X2 <- cbind(rep(1,51), train_set[,1:4])
+X2 <- as.matrix(X2)
+
+```
+
+-   Następnie tworzę macierz wskaźnikową Y2 wymiaru 51 **(u nas podział zbioru to 99/51)** x K, która zawiera zmienne binarne kodujące poszczególne klasy.
+
+```{r inicjalizacja macierzy zer}
+
+#DANE TESTOWE
+#--------------------------------------------
+
+# etykietki klas (gatunki)
+etykietki.klas1 <-  test_set$Species
+
+# inicjalizacja (macierz wypełniona zerami)
+Y1 <- matrix(0, nrow=n1, ncol=K)
+
+# konwersja etykietek klas na wartości numeryczne
+etykietki.num1 <- as.numeric(etykietki.klas1)
+
+for (k in 1:K)  
+  Y1[etykietki.num1==k, k] <- 1
+
+#--------------------------------------------
+
+
+#DANE UCZĄCE
+#--------------------------------------------
+
+# etykietki klas (gatunki)
+etykietki.klas2 <-  train_set$Species
+
+# inicjalizacja (macierz wypełniona zerami)
+Y2 <- matrix(0, nrow=n2, ncol=K)
+
+# konwersja etykietek klas na wartości numeryczne
+etykietki.num2 <- as.numeric(etykietki.klas2)
+
+for (k in 1:K)  
+  Y2[etykietki.num2==k, k] <- 1
+
+#--------------------------------------------
+
+```
+
+### Estymacja współczynników i konstrukcja prognoz
+
+-   Wykorzystujemy metodę najmniejszych kwadratów (MNK) aby wyznaczyć estymatory współczynników modelu
+
+```{r estymacja,echo = TRUE}
+
+# Macierz estymowanych współczynników 
+B.hat1 <- solve(t(X2)%*%X2) %*% t(X2) %*% Y2 # X2 i Y2 są dla danych uczących
+
+```
+
+-   Na podstawie dopasowanego modelu możemy teraz wyznaczyć wartości prognozowane dla zbioru danych testowych oraz trenujących
+
+```{r Wartosci_prognozowane}
+
+#PROGNOZOWANIE WARTOŚCI
+#---------------------------------------------------------
+Y.hat1 <- X1%*%B.hat1 #X1 TO DANE TESTOWE
+
+Y.hat2 <- X2%*%B.hat1 #X2 TO DANE UCZĄCE
+#---------------------------------------------------------
+
+```
+
+Wyznaczone prawdopodobieństwa możemy przedstawić na wykresach
+
+```{r wykresy1}
+
+#PRZEDSTAWIENIE PRAWDOPODOBIEŃSTW NA WYKRESIE
+#---------------------------------------------------------
+matplot(Y.hat1, main="Prognozy gatunków dla danych testowych",xlab="id",ylab = "Prawdopodobieństwo", ylim=c(-.5,2))
+
+abline(v=c(50,100), lty=2, col="gray")
+
+legend(x="topright", legend=paste(1:3,levels(train_set$Species)), col=1:3, text.col=1:3, bg="azure2")
+#---------------------------------------------------------
+
+
+```
+
+Widać, **wyraźny podział na przedziały**, w których prawdopodobieństwo przynaleźności do odpowiednio grup 1,2,3 jest największe
+
+```{r wykresy2}
+
+#ZNOWU PRAWDOPODOBIEŃSTWA PRZEDSTAWIONE NA WYKRESIE
+#---------------------------------------------------------
+matplot(Y.hat2, main="Prognozy gatunków dla danych uczących",xlab="id",ylab = "Prawdopodobieństwo",ylim=c(-.5,2))
+
+abline(v=c(50,100), lty=2, col="gray")
+
+legend(x="topright", legend=paste(1:3,levels(train_set$Species)), col=1:3, text.col=1:3, bg="azure2")
+#---------------------------------------------------------
+
+```
+
+Dla prognozowanych gatunków w zbiorze treningowym obserwujemy **podobny rozkład, z wyjątkiem środkowej grupy**. W tym przypadku występuje **zjawisko maskowania — gatunek nr 2 jest częściowo przesłaniany przez gatunek nr 3**. Na podstawie wykresu trudno jednoznacznie ocenić, który z tych dwóch gatunków ma w tym obszarze większe prawdopodobieństwo.
+
+\newpage
+
+## d) **Ocena jakości modelu**
+
+```{r klasyfikacja}
+
+#SPRAWDZANIE JAKOŚCI MODELU PREDYKCJI
+#---------------------------------------------------------
+# zapisujemy nazwy kolejnych klas 
+klasy1 <- levels(train_set$Species)
+
+# Dla każdego wiersza sprawdzamy, który element wektora Y.hat (1,2 lub 3) jest maksymalny
+maks.ind1 <- apply(Y.hat1, 1, FUN=function(x) which.max(x))
+
+
+# zapisujemy nazwy kolejnych klas 
+klasy2 <- levels(train_set$Species)
+
+# Dla każdego wiersza sprawdzamy, który element wektora Y.hat (1,2 lub 3) jest maksymalny
+maks.ind2 <- apply(Y.hat2, 1, FUN=function(x) which.max(x))
+#---------------------------------------------------------
+
+```
+
+```{r prognozowane_etykiety}
+
+#PROGNOZOWANE ETYKIET DLA GRUPY TESTOWEJ ORAZ UCZĄCEJ
+#---------------------------------------------------------
+# Konwersja na etykietki klas
+prognozowane.etykietki1 <- klasy1[maks.ind1]
+
+# Konwersja na etykietki klas
+prognozowane.etykietki2 <- klasy2[maks.ind2]
+#---------------------------------------------------------
+
+```
+
+Tworzymy macierz pomyłek, wygenerowanych etykiet odpowiednio dla:
+
+-   **Danych trenujących**
+
+```{r macierz_pomyłek1}
+
+#PREZENTACJA MACIERZY POMYŁEK DLA TESTOWYCH
+#---------------------------------------------------------
+rzeczywiste.etykietki1 <- etykietki.klas1
+
+# macierz pomyłek (ang. confusion matrix)
+macierz.pomylek1 <- table(rzeczywiste.etykietki1, prognozowane.etykietki1)
+
+kable(macierz.pomylek1)
+#---------------------------------------------------------
+
+```
+
+-   **Danych uczących**
+
+```{r macierz pomyłek 2}
+
+#MACIERZ POMYŁEK DLA UCZĄCYCH
+#---------------------------------------------------------
+rzeczywiste.etykietki2 <- etykietki.klas2
+
+# macierz pomyłek (ang. confusion matrix)
+macierz.pomylek2 <- table(rzeczywiste.etykietki2, prognozowane.etykietki2)
+
+kable(macierz.pomylek2)
+#---------------------------------------------------------
+
+```
+
+Teraz liczymy **dokładność naszego modelu dla danych testowych**
+
+```{r dokładność_klasyfikacji1}
+
+#DOKŁADNOŚĆ KLASYFIKACJI 
+#---------------------------------------------------------
+# Oblicz dokładność
+accuracy <- sum(diag(macierz.pomylek1)) / n1
+
+# Zamień na data.frame z nazwą kolumny
+accuracy_df <- data.frame(Dokładność = accuracy)
+
+kable(accuracy_df)
+#---------------------------------------------------------
+
+```
+
+Widzimy **dokładność na poziomie ok 87% dla danych trenujących**, jest to dokładność na dobrym poziomie
+
+Następnie dla danych uczących
+
+```{r dokładność klasyfikacji2}
+
+#DOKŁADNOŚĆ KLASYFIKACJI
+#---------------------------------------------------------
+# Oblicz dokładność
+accuracy <- sum(diag(macierz.pomylek2)) / n2
+
+# Zamień na data.frame z nazwą kolumny
+accuracy_df <- data.frame(Dokładność = accuracy)
+
+kable(accuracy_df)
+#---------------------------------------------------------
+
+```
+
+Warto zwrócić uwagę na zauważalny i istotny, a zarazem paradoksalny spadek dokładności dopasowania, mimo że etykiety przypisujemy do danych treningowych, gdzie teoretycznie oczekiwalibyśmy zgodności na poziomie 100%. **Tymczasem uzyskana wartość wynosi jedynie 84%, co oznacza spadek o około 3%.**
+
+\newpage
+
+## e) **Budowa modelu liniowego dla rozszerzonej przestrzeni cech**
+
+Teraz powtórzymy budowę modelu regresji, po uzupełnieniu cech o składniki wielomianowe stopnia 2 Dokładniej o ${SL}^2, {SW}^2, PL * PW, PL * SW, PL * SL, PW * SL, PW * SW, SL * SW$
+
+**Kroki b) oraz c) przebiegają analogicznie** — tworzymy model regresji w ten sam sposób, z tą różnicą, że **teraz uwzględniamy dodatkowe cechy**
+
+```{r zmiana nazw}
+
+#PRZYGOTOWANIE DANYCH
+#---------------------------------------------------------
+#DEFINICJA NOWYCH DANYCH 
+new_iris <- iris
+
+#ZMIANA NAZW
+names(new_iris) <- c("SL","SW","PL","PW","Spec")
+
+#DODANIE NOWYCH ZMIENNYCH (WPROWADZENIE DRUGIEGO WYMIARU)
+new_iris<- transform(new_iris, SL.SW=SL*SW,  PL.PW=PL*PW, PL.SL=PL*SL, PL.SW=PL*SW, PW.SW=PW*SW, PW.SL=PW*SL, PL2=PL*PL, PW2=PW*PW, SL2=SL*SL, SW2=SW*SW)
+#---------------------------------------------------------
+
+```
+
+```{r data_partioning_rozszerzone}
+#PRZYGOTWANIE ZBIÓR UCZĄCEGO I TESTOWEGO
+#---------------------------------------------------------
+#TUTAJ TO DAJE NAM, ŻE MAMY PROPOCJE KLAS ZACHOWANE
+train_set <- new_iris %>%
+  group_by(Spec) %>%
+  sample_frac(1/3) %>%
+  ungroup()
+
+test_set <- anti_join(new_iris, train_set, by = colnames(new_iris))
+#---------------------------------------------------------
+
+```
+
+```{r tworzenie_macierzy_rozszerzone}
+#TWORZENIE MACIERZY ZE STAŁĄ REGRESJI LINIOWEJ, ABY STWORZYĆ MODEL
+#---------------------------------------------------------
+K=3
+p = 14
+n1= nrow(test_set)
+n2 = nrow(train_set)
+# X1 - macierz eksperymentu (ang. design matrix) dla danych TESTOWYCH
+X1 <- cbind(rep(1,n1), test_set[,1:14][,-5])
+X1 <- as.matrix(X1)
+
+# X2 - macierz eksperymentu (ang. design matrix) dla danych UCZĄCYCH
+X2 <- cbind(rep(1,n2), train_set[,1:14][,-5])
+X2 <- as.matrix(X2)
+#---------------------------------------------------------
+
+```
+
+```{r inicjalizacja macierzy zer_rozszerzone}
+
+#DANE TESTOWE
+#--------------------------------------------
+
+# etykietki klas (gatunki)
+etykietki.klas1 <-  test_set$Spec
+
+# inicjalizacja (macierz wypełniona zerami)
+Y1 <- matrix(0, nrow=n1, ncol=K)
+
+# konwersja etykietek klas na wartości numeryczne
+etykietki.num1 <- as.numeric(etykietki.klas1)
+
+for (k in 1:K)  
+  Y1[etykietki.num1==k, k] <- 1
+
+#--------------------------------------------
+
+#DANE UCZĄCE
+#--------------------------------------------
+
+# etykietki klas (gatunki)
+etykietki.klas2 <-  train_set$Spec
+
+# inicjalizacja (macierz wypełniona zerami)
+Y2 <- matrix(0, nrow=n2, ncol=K)
+
+# konwersja etykietek klas na wartości numeryczne
+etykietki.num2 <- as.numeric(etykietki.klas2)
+
+for (k in 1:K)  
+  Y2[etykietki.num2==k, k] <- 1
+
+#--------------------------------------------
+
+```
+
+```{r estymacja_rozszerzone}
+
+# Macierz estymowanych współczynników 
+B.hat1 <- solve(t(X2)%*%X2) %*% t(X2) %*% Y2 # X2 i Y2 są dla danych uczących
+
+```
+
+```{r Wartosci_prognozowane_rozszerzone}
+
+Y.hat1 <- X1%*%B.hat1 #X1 TO DANE TESTOWE
+
+Y.hat2 <- X2%*%B.hat1 #X2 TO DANE UCZĄCE
+
+```
+
+Wyznaczone w nowy sposób prawdopodobieństwa przypisań możemy ponownie przedstawić za pomocą wykresów.
+
+```{r wykresy_rozszerzone1}
+
+matplot(Y.hat1, main="Prognozy gatunków dla danych testowych",xlab="id", ylab = "Prawdopodobieństwo",ylim=c(-.5,2))
+
+abline(v=c(50,100), lty=2, col="gray")
+
+legend(x="topright", legend=paste(1:3,levels(train_set$Spec)), col=1:3, text.col=1:3, bg="azure2")
+
+
+```
+
+Widać jeszcze wyraźniejszy podział na grupy niż w przypadku predykcji bez dodatkowych cech. Szczególnie dobrze widać dla których przedziałów dominują prawdopodobieństwa poszczególnych grup.
+
+```{r wykresy_rozszerzone2}
+
+matplot(Y.hat2, main="Prognozy gatunków dla danych uczących",xlab="id",ylab = "Prawdopodobieństwo",ylim=c(-.5,2))
+
+abline(v=c(50,100), lty=2, col="gray")
+
+legend(x="topright", legend=paste(1:3,levels(train_set$Spec)), col=1:3, text.col=1:3, bg="azure2")
+
+```
+
+Dla danych uczących obserwujemy podobne cechy jak na poprzednim wykresie — nie dostrzegamy żadnych oznak maskowania. Wyraźnie zaznaczają się przedziały największych prawdopodobieństw dla poszczególnych grup. Całość cechuje się znacznie większą przejrzystością niż w przypadku regresji liniowej bez dodatkowych cech.
+
+#### **Ocena jakości nowego modelu**
+
+```{r klasyfikacja_rozszerzone}
+
+# zapisujemy nazwy kolejnych klas 
+klasy1 <- levels(train_set$Spec)
+
+# Dla każdego wiersza sprawdzamy, który element wektora Y.hat (1,2 lub 3) jest maksymalny
+maks.ind1 <- apply(Y.hat1, 1, FUN=function(x) which.max(x))
+
+
+# zapisujemy nazwy kolejnych klas 
+klasy2 <- levels(train_set$Spec)
+
+# Dla każdego wiersza sprawdzamy, który element wektora Y.hat (1,2 lub 3) jest maksymalny
+maks.ind2 <- apply(Y.hat2, 1, FUN=function(x) which.max(x))
+
+```
+
+```{r prognozowane_etykiety_rozszerzone}
+
+# Konwersja na etykietki klas
+prognozowane.etykietki1 <- klasy1[maks.ind1]
+
+# Konwersja na etykietki klas
+prognozowane.etykietki2 <- klasy2[maks.ind2]
+
+```
+
+Tworzymy macierz pomyłek, wygenerowanych etykiet odpowiednio dla:
+
+\*Danych trenujących
+
+```{r macierz_pomyłek_rozszerzone}
+
+rzeczywiste.etykietki1 <- etykietki.klas1
+
+# macierz pomyłek (ang. confusion matrix)
+macierz.pomylek1 <- table(rzeczywiste.etykietki1, prognozowane.etykietki1)
+kable(macierz.pomylek1)
+
+```
+
+-   Danych uczących
+
+```{r macierz pomyłek_rozszerzone}
+
+rzeczywiste.etykietki2 <- etykietki.klas2
+
+# macierz pomyłek (ang. confusion matrix)
+macierz.pomylek2 <- table(rzeczywiste.etykietki2, prognozowane.etykietki2)
+kable(macierz.pomylek2)
+
+```
+
+I liczymy dokładność naszego modelu dla danych testowych
+
+```{r dokładność_klasyfikacji_rozszerzone}
+
+# Oblicz dokładność
+accuracy <- sum(diag(macierz.pomylek1)) / n1
+
+# Zamień na data.frame z nazwą kolumny
+accuracy_df <- data.frame(Dokładność = accuracy)
+
+kable(accuracy_df)
+
+```
+
+W przypadku danych treningowych obserwujemy dokładność na poziomie około 95%, co stanowi znakomity wynik — to aż **o 8 punktów procentowych więcej niż w przypadku standardowego modelu regresji liniowej.**
+
+Następnie dla danych uczących
+
+```{r dokładność klasyfikacji_rozszerzone}
+
+# Oblicz dokładność
+accuracy <- sum(diag(macierz.pomylek2)) / n2
+
+# Zamień na data.frame z nazwą kolumny
+accuracy_df <- data.frame(Dokładność = accuracy)
+
+kable(accuracy_df)
+
+```
+
+W nowym modelu obserwujemy wzrost dokładności dla danych treningowych — **osiąga ona bardzo wysoki poziom 98%**. To o 1 punkt procentowy więcej niż dla danych testowych oraz aż o 13 punktów procentowych więcej w porównaniu do modelu bez dodatkowych cech.
+
+## Wnioski
+
+Dodanie dodatkowych cech znacząco poprawia dokładność modelu regresji liniowej, jednocześnie zmniejszając jego podatność na efekt maskowania między klasami.
+
+
+
+
+
+
+
+# Zadanie 2
+
+## a) Wybór i zapoznanie się z danymi
+
+```{r wine}
+data("wine")
+dane <- wine 
+```
+
+**Opis** zmiennych w zbiorze danych **Wine**
+
+```{r Opis_danych_wine}
+tabela_danych <- data.frame(
+  Kolumna = c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12", "V13"),
+  Nazwa_zmiennej = c("Alcohol", "Malic acid", "Ash", "Alcalinity of ash", "Magnesium", 
+                      "Total phenols", "Flavanoids", "Nonflavanoid phenols", "Proanthocyanins", 
+                      "Color intensity", "Hue", "OD280/OD315 of diluted wines", "Proline"),
+  Opis = c("Zawartość alkoholu (%)", "Zawartość kwasu jabłkowego (g/l)", "Zawartość popiołu (g/l)", 
+           "Zasadowość popiołu (g/l)", "Zawartość magnezu (mg/l)", "Zawartość fenoli ogółem (g/l)", 
+           "Zawartość flawonoidów (g/l)", "Zawartość fenoli nienależących do flawonoidów (g/l)", 
+           "Zawartość proantocyjaninów (g/l)", "Intensywność koloru (od 0 do 13)", "Odcień barwy", 
+           "Absorbancja przy długości fali 280 nm do 315 nm (rozcieńczone wino)", "Zawartość proliny (mg/l)")
+)
+
+kable(tabela_danych, col.names = c("Kolumna", "Nazwa zmiennej", "Opis"))
+```
+
+------------------------------------------------------------------------
+
+Pierwsze 10 rekordów zbioru danych.
+
+```{r wstep}
+kable(head(dane, 10))
+```
+
+```{r przypadki, echo=FALSE}
+P = nrow(dane)  # liczba przypadków (obserwacji)
+Z = ncol(dane)  # liczba zmiennych (cech)
+```
+
+Zbiór danych ma **`r P`** przypadków i **`r Z`** zmiennych
+
+```{r jaka_etykieta}
+unique_counts <- sapply(dane, function(x) length(unique(x)))
+
+kable(data.frame(Liczba_unikalnych = unique_counts), 
+      col.names = "Liczba unikalnych", 
+      caption = "Liczba unikalnych wartości w każdej zmiennej")
+```
+
+Zmienna **class** pełni rolę etykiety klas, informując o przynależności każdego obiektu do jednej z trzech grup. Świadczy o tym zarówno jej nazwa, jak i liczba unikalnych wartości, które przyjmuje — są to trzy klasy: ***1***, ***2*** i ***3***.
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+Ilość danych oznaczonych jako **Na** w danych kolumnach.
+
+```{r braki_nietypowe_kodowanie}
+colSums(is.na(dane))
+
+#sapply(dane, function(x) unique(x))
+```
+
+**Analizując dane**, można zauważyć, że **zbiór nie zawiera żadnych braków** — ani oznaczonych jako **NA**, ani zapisanych w inny sposób. **Wszystkie obserwacje** wydają się być **poprawnie wprowadzone**.
+
+Jeśli chodzi o **wartości nietypowe**, to w kolumnie **V10** znajduje się **jedna obserwacja** o wartości **9.899999**, która ma **aż sześć miejsc po przecinku**.
+
+Dla porównania, **pozostałe wartości** w tej kolumnie mają **najwyżej dwie cyfry po przecinku**, co może **sugerować błąd w zapisie** tej konkretnej danej.
+
+W kolumnie **V5** pojawia się również wartość **162**, która **znacząco odstaje od reszty obserwacji** i może być wynikiem **błędu pomiaru** lub **wprowadzenia danych**.
+
+------------------------------------------------------------------------
+
+**Typ** danych jaki przyjmują wartości z danej kolumny
+
+```{r sprawdzenie_typow}
+kable(data.frame(Typ_Danych = sapply(dane, class)), col.names = "Typ danych")
+```
+
+Widać, że **wszystkie zmienne mają prawidłowo przypisane typy danych**, z wyjątkiem **naszej etykiety klas** — kolumny **class**.
+
+Obecnie ma ona typ **integer**, co jest zrozumiałe, ponieważ wartości to liczby całkowite **{1, 2, 3}**.
+
+Jednak **dla poprawnej analizy** i właściwego traktowania tej zmiennej jako **zbioru kategorii**, powinna zostać **przekonwertowana na typ factor**.
+
+------------------------------------------------------------------------
+
+```{r zmiana_int_na_factor}
+dane$class <- as.factor(dane$class)
+```
+
+## b) Wstępna analiza danych
+
+### Rozkład klas w zbiorze
+
+Ilość rekordów przypisanych do odpowiedniej klasy.
+
+```{r class_ilosc}
+kable(as.data.frame(table(dane$class)), col.names = c("Klasa", "Ilość"))
+```
+
+W zbiorze danych widoczne są wyraźne dysproporcje w liczebności poszczególnych klas. Najliczniejsza jest klasa 2, która stanowi około 40% wszystkich obserwacji. Następnie plasuje się klasa 1 z udziałem na poziomie około 33%. Najmniej reprezentowana jest klasa 3, obejmująca pozostałe przypadki.
+
+Jeżeli przypisalibyśmy wszystkie obiekty do jednej dominującej klasy **(klasa 2)**, to aż 107 win byłoby przyporządkowanych źle. Wszystkich trunków mamy 178, więc mielibyśmy błąd klasyfikacji na poziome $\frac{107}{178}\approx 60\%$
+
+### Wariancje poszczególnych cech
+
+Dla danych możemy zwizualizować wariancje poszczególnych cech na wykresie słupkowym:
+
+```{r cechy}
+
+
+# Załóżmy, że dane1 to ramka danych numerycznych z nazwanymi kolumnami
+
+# Obliczamy wariancję dla każdej kolumny
+wariancje <- apply(dane[,-1], 2, var)
+
+# Zamieniamy na ramkę danych do ggplot
+df_var <- data.frame(
+  cecha = names(wariancje),
+  wariancja = wariancje
+)
+
+
+
+# Rysujemy wykres słupkowy wariancji
+ggplot(df_var, aes(x = reorder(cecha, -wariancja), y = wariancja, fill = cecha)) +
+  geom_col(show.legend = FALSE) +
+  labs(title = "Wariancja poszczególnych cech",
+       x = "Cecha",
+       y = "Wariancja") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+**Wariancje** (posortowane malejąco)
+
+```{r war2}
+print(round(sort(wariancje, decreasing = TRUE), 2))
+```
+
+Widać bardzo istotne różnice w zmienności poszczególnych grup, wariancja cechy V13 stanowi główny element wykresu. Jeżeli przyjrzymy się im dokłądniej, to okaże się, że wariancja V13 jest większa $10^4$ raz od drugiej co do wielkosci wariancji **(Zmiennej V5)**
+
+```{r tabela}
+
+# Wyświetlamy wariancje w tabeli
+kable(df_var)
+
+```
+
+Konieczność standaryzacji w niektórych algorytmach wynika z tego, że cechy danych moją różne zakresy wartości. Bez standaryzacji cechy o większych skalach mogą zdominować obliczenia, co prowadzi do nieoptymalnych wyników
+
+### Cechy o najlepszej zdolności dyskryminacyjnej
+
+```{r dodanie kolumny}
+
+dane$losowa_kolumna <- runif(nrow(dane), min = 0, max = 1)
+
+```
+
+Teraz obliczamy wartość dyskryminacyjne testem anova.
+
+```{r wykres}
+
+# Obliczenie wartości p dla każdej cechy
+wyniki_anova <- sapply(dane[,-15][, -which(colnames(dane) == "class")], function(x) {
+  summary(aov(x ~ dane$class))[[1]][["Pr(>F)"]][1]
+})
+
+# Sortujemy i zachowujemy notację wykładniczą
+wyniki_anova_sorted <- sort(unlist(wyniki_anova))
+wyniki_anova_formatted <- formatC(wyniki_anova_sorted, format = "e", digits = 3)
+
+# Tworzymy ramkę danych do wyświetlenia
+tabela <- data.frame(Cecha = names(wyniki_anova_sorted), `p-wartość` = wyniki_anova_formatted)
+
+# Wyświetlamy jako kable
+kable(tabela, caption = "Wartości p z testu ANOVA dla każdej cechy")
+
+
+
+```
+Na podstawie testu Anova, widać że zmienna **V7 ma najlepszą zdolność dyskryminacyjną.**
+
+```{r boxploty_V7}
+boxplot(V7 ~ class, data = wine,
+        main = "Rozkład cechy V7 według klas",
+        xlab = "Klasa",
+        ylab = "V7",
+        col = "lightgreen",
+        border = "darkgreen")
+```
+
+## c) Ocena dokładności klasyfikacji
+
+### Pojedynczy podział na zbiór uczący i testowy
+Dla porównania metod klasyfikacyjnych podzielono dane na zbiór uczący/treningowy (70%) czyli 126 rekordów i testowy (30%) czyli 52 rekordy. Oceniono skuteczność klasyfikatorów na zbiorze testowym oraz uczącym.
+
+```{r dane}
+# Podział na zbiory treningowy i testowy
+set.seed(123)
+train_idx <- createDataPartition(dane$class, p = 0.7, list = FALSE)
+dane_train <- dane[train_idx, ]
+dane_test <- dane[-train_idx, ]
+
+# Przygotowanie danych
+X_train <- dane_train[, -1]
+y_train <- dane_train$class
+X_test <- dane_test[, -1]
+y_test <- dane_test$class
+
+# Standaryzacja
+preproc <- preProcess(X_train, method = c("center", "scale"))
+X_train_std <- predict(preproc, X_train)
+X_test_std <- predict(preproc, X_test)
+
+wyniki_pojedynczy <- list()
+```
+
+### Metoda k-najbliższych sąsiadów
+
+```{r funkcja_wyswietlania}
+set.seed(123)
+# Funkcja do obliczania dokładności
+evaluate_model <- function(pred, actual, model_name) {
+  cm <- confusionMatrix(pred, actual)
+  accuracy <- cm$overall['Accuracy']
+  #cat("\n", model_name, ":\n")
+  #cat("Dokładność:", round(accuracy, 4), "\n")
+  #cat("Błąd klasyfikacji:", round(1 - accuracy, 4), "\n")
+  #print(cm$table)
+  return(accuracy)
+}
+```
+
+```{r knn_rozne_k}
+set.seed(123)
+# 1. k-NN z różnymi wartościami k
+k_values <- c(1, 3, 5, 7, 9, 11)
+knn_results <- data.frame(k = k_values, accuracy_train = NA, accuracy_test = NA)
+
+for (i in 1:length(k_values)) {
+  k <- k_values[i]
+  
+  # Predykcja na zbiorze treningowym
+  pred_train <- knn(X_train_std, X_train_std, y_train, k = k)
+  acc_train <- mean(pred_train == y_train)
+  
+  # Predykcja na zbiorze testowym
+  pred_test <- knn(X_train_std, X_test_std, y_train, k = k)
+  acc_test <- mean(pred_test == y_test)
+  
+  knn_results[i, "accuracy_train"] <- acc_train
+  knn_results[i, "accuracy_test"] <- acc_test
+}
+
+kable(knn_results, digits = 4, caption = "Wyniki k-NN dla różnych wartości k")
+
+# Szczegółowe wyniki dla k=5
+pred_knn_best <- knn(X_train_std, X_test_std, y_train, k = 5)
+acc_knn_best <- evaluate_model(pred_knn_best, y_test, "k-NN (k=5)")
+```
+
+```{r tabelka_k-NN_5}
+# Macierz pomyłek
+cm_test <- matrix(c(17, 0, 0,
+                    0, 21, 0,
+                    0, 0, 14), 
+                  nrow = 3, byrow = TRUE)
+
+colnames(cm_test) <- c("Przewidziana: 1", "Przewidziana: 2", "Przewidziana: 3")
+rownames(cm_test) <- c("Prawdziwa: 1", "Prawdziwa: 2", "Prawdziwa: 3")
+
+kable(cm_test, caption = "Macierz pomyłek – metoda KNN dla k = 5") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Na przykład dokładność metody kNN dla k=5 wynosi *1* a błąd klasyfikacji wynosi *0*.
+
+```{r wykres_knn}
+set.seed(123)
+knn_plot_data <- reshape2::melt(knn_results, id.vars = "k")
+ggplot(knn_plot_data, aes(x = k, y = value, color = variable)) +
+  geom_line() + geom_point() +
+  labs(title = "Dokładność k-NN dla różnych wartości k",
+       x = "k", y = "Dokładność") +
+  scale_x_continuous(breaks = seq(min(knn_plot_data$k), max(knn_plot_data$k), by = 1)) +
+  theme_minimal()
+
+```
+
+### Metoda drzewa klasyfikacyjnego
+
+```{r drzewa_rozne_cp}
+set.seed(123)
+         
+# Drzewa klasyfikacyjne z różnymi parametrami
+
+cp_values <- c(0.001, 0.01, 0.05, 0.1)
+tree_results <- data.frame(cp = cp_values, accuracy_train = NA, accuracy_test = NA)
+
+for (i in 1:length(cp_values)) {
+  cp <- cp_values[i]
+  
+  model_tree <- rpart(class ~ ., data = dane_train, cp = cp)
+  
+  pred_train <- predict(model_tree, dane_train, type = "class")
+  pred_test <- predict(model_tree, dane_test, type = "class")
+  
+  acc_train <- mean(pred_train == y_train)
+  acc_test <- mean(pred_test == y_test)
+  
+  tree_results[i, "accuracy_train"] <- acc_train
+  tree_results[i, "accuracy_test"] <- acc_test
+}
+
+kable(tree_results, digits = 4, caption = "Wyniki drzew dla różnych wartości cp")
+
+# Szczegółowe wyniki dla cp=0.01
+model_tree_best <- rpart(class ~ ., data = dane_train, cp = 0.01)
+pred_tree_best <- predict(model_tree_best, dane_test, type = "class")
+acc_tree_best <- evaluate_model(pred_tree_best, y_test, "Drzewo (cp=0.01)")
+```
+
+```{r tabelka_drzewo_cp=0.01}
+# Macierz pomyłek
+cm_test <- matrix(c(16, 0, 0,
+                    1, 21, 0,
+                    0, 0, 14), 
+                  nrow = 3, byrow = TRUE)
+
+colnames(cm_test) <- c("Przewidziana: 1", "Przewidziana: 2", "Przewidziana: 3")
+rownames(cm_test) <- c("Prawdziwa: 1", "Prawdziwa: 2", "Prawdziwa: 3")
+
+kable(cm_test, caption = "Macierz pomyłek – metoda drzewa  klasyfikacyjnego dla cp=0.01") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Na przykład dokładność metody drzewa klasyfikacyjnego dla cp=0.01 wynosi *0.9808* a błąd klasyfikacji wynosi *0.0192*.
+
+### Metoda naiwnego Bayes'a
+
+```{r naive_bayes}
+set.seed(123)
+# Naiwny klasyfikator Bayesa
+model_nb <- naiveBayes(class ~ ., data = dane_train)
+pred_nb_test <- predict(model_nb, dane_test)
+acc_nb <- evaluate_model(pred_nb_test, y_test, "Naiwny Bayes")
+
+# Model na danych standaryzowanych
+model_nb_std <- naiveBayes(X_train_std, y_train)
+pred_nb_std_test <- predict(model_nb_std, X_test_std)
+acc_nb_std <- evaluate_model(pred_nb_std_test, y_test, "Naiwny Bayes (standaryzowane)")
+```
+
+```{r tabelka_bayes}
+cm_test <- matrix(c(17, 0, 0,
+                    0, 21, 0,
+                    0, 0, 14), 
+                  nrow = 3, byrow = TRUE)
+
+colnames(cm_test) <- c("Przewidziana: 1", "Przewidziana: 2", "Przewidziana: 3")
+rownames(cm_test) <- c("Prawdziwa: 1", "Prawdziwa: 2", "Prawdziwa: 3")
+
+kable(cm_test, caption = "Macierz pomyłek – metoda naiwnego Bayes'a") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+```{r tabelka_bayes_standard}
+cm_test <- matrix(c(17, 0, 0,
+                    0, 21, 0,
+                    0, 0, 14), 
+                  nrow = 3, byrow = TRUE)
+
+colnames(cm_test) <- c("Przewidziana: 1", "Przewidziana: 2", "Przewidziana: 3")
+rownames(cm_test) <- c("Prawdziwa: 1", "Prawdziwa: 2", "Prawdziwa: 3")
+
+kable(cm_test, caption = "Macierz pomyłek – metoda naiwnego Bayes'a na ustandaryzowanych danych") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Jak widać metoda naiwnego bayesa ma 100% dokładność na naszych danych testowych.
+
+## d) Różne parametry i różne podzbiory cech
+
+**Dokładność podczas testowania ze wszystkimi cechami i z tylko top5 cechami dyskryminującymi**
+
+```{r najlepsze_cechy}
+oblicz_ratio_var <- function(x, y) {
+  means_group <- tapply(x, y, mean)
+  var_between <- var(means_group)
+  var_within <- mean(tapply(x, y, var))
+  ratio <- var_between / var_within
+  return(ratio)
+}
+
+ratio_vars <- sapply(dane[,-1], function(x) oblicz_ratio_var(x, dane$class))
+df_ratio <- data.frame(
+  cecha = names(ratio_vars),
+  ratio = ratio_vars
+)
+df_ratio <- df_ratio[order(df_ratio$ratio, decreasing = TRUE),]
+najlepsze_cechy <- head(df_ratio$cecha, 5)
+cechy_top5 <- najlepsze_cechy
+```
+
+```{r test_wszystkie_cechy}
+# Funkcja do testowania z różnymi cechami
+test_features <- function(features) {
+  # Przygotowanie danych
+  X_train_feat <- dane_train[, features]
+  X_test_feat <- dane_test[, features]
+  
+  # Standaryzacja
+  preproc_feat <- preProcess(X_train_feat, method = c("center", "scale"))
+  X_train_feat_std <- predict(preproc_feat, X_train_feat)
+  X_test_feat_std <- predict(preproc_feat, X_test_feat)
+  
+  results <- list()
+  
+  # k-NN (k=5)
+  pred_knn <- knn(X_train_feat_std, X_test_feat_std, y_train, k = 5)
+  acc_knn <- mean(pred_knn == y_test)
+  results$knn <- acc_knn
+  
+  # Drzewo (cp=0.01)
+  dane_train_feat <- dane_train[, c("class", features)]
+  dane_test_feat <- dane_test[, c("class", features)]
+  model_tree_feat <- rpart(class ~ ., data = dane_train_feat, cp = 0.01)
+  pred_tree <- predict(model_tree_feat, dane_test_feat, type = "class")
+  acc_tree <- mean(pred_tree == y_test)
+  results$tree <- acc_tree
+  
+  # Naiwny Bayes
+  model_nb_feat <- naiveBayes(X_train_feat_std, y_train)
+  pred_nb <- predict(model_nb_feat, X_test_feat_std)
+  acc_nb <- mean(pred_nb == y_test)
+  results$nb <- acc_nb
+  
+  return(results)
+}
+
+# Testowanie z wszystkimi cechami
+cechy_wszystkie <- names(dane)[-1]
+wyniki_wszystkie <- test_features(cechy_wszystkie)
+```
+
+```{r test_top5_cechy}
+# Testowanie z top 5 cechami
+wyniki_top5 <- test_features(najlepsze_cechy)
+
+# Porównanie wyników
+porownanie_cech <- data.frame(
+  Metoda = c("k-NN", "Drzewo", "Naiwny Bayes"),
+  Wszystkie_cechy = c(wyniki_wszystkie$knn, wyniki_wszystkie$tree, wyniki_wszystkie$nb),
+  Top5_cech = c(wyniki_top5$knn, wyniki_top5$tree, wyniki_top5$nb)
+)
+
+kable(porownanie_cech, digits = 4, caption = "Porównanie wyników dla różnych zbiorów cech")
+```
+
+
+**Cross-Validation**
+
+```{r cross_validation}
+cv_evaluate <- function(dane, features, cv_folds = 10) {
+  set.seed(123)
+  folds <- createFolds(dane$class, k = cv_folds)
+  
+  results <- data.frame(
+    fold = 1:cv_folds,
+    knn_k3 = NA, knn_k5 = NA, knn_k7 = NA,
+    tree_cp001 = NA, tree_cp01 = NA,
+    nb = NA
+  )
+  
+  for (i in 1:cv_folds) {
+    train_idx <- unlist(folds[-i])
+    test_idx <- folds[[i]]
+    
+    dane_train_cv <- dane[train_idx, ]
+    dane_test_cv <- dane[test_idx, ]
+    
+    X_train_cv <- dane_train_cv[, features]
+    X_test_cv <- dane_test_cv[, features]
+    y_train_cv <- dane_train_cv$class
+    y_test_cv <- dane_test_cv$class
+    
+    # Standaryzacja
+    preproc_cv <- preProcess(X_train_cv, method = c("center", "scale"))
+    X_train_cv_std <- predict(preproc_cv, X_train_cv)
+    X_test_cv_std <- predict(preproc_cv, X_test_cv)
+    
+    # k-NN z różnymi k
+    pred_knn3 <- knn(X_train_cv_std, X_test_cv_std, y_train_cv, k = 3)
+    pred_knn5 <- knn(X_train_cv_std, X_test_cv_std, y_train_cv, k = 5)
+    pred_knn7 <- knn(X_train_cv_std, X_test_cv_std, y_train_cv, k = 7)
+    
+    results[i, "knn_k3"] <- mean(pred_knn3 == y_test_cv)
+    results[i, "knn_k5"] <- mean(pred_knn5 == y_test_cv)
+    results[i, "knn_k7"] <- mean(pred_knn7 == y_test_cv)
+    
+    # Drzewa z różnymi cp
+    dane_train_cv_full <- dane_train_cv[, c("class", features)]
+    dane_test_cv_full <- dane_test_cv[, c("class", features)]
+    
+    model_tree1 <- rpart(class ~ ., data = dane_train_cv_full, cp = 0.001)
+    model_tree2 <- rpart(class ~ ., data = dane_train_cv_full, cp = 0.01)
+    
+    pred_tree1 <- predict(model_tree1, dane_test_cv_full, type = "class")
+    pred_tree2 <- predict(model_tree2, dane_test_cv_full, type = "class")
+    
+    results[i, "tree_cp001"] <- mean(pred_tree1 == y_test_cv)
+    results[i, "tree_cp01"] <- mean(pred_tree2 == y_test_cv)
+    
+    # Naiwny Bayes
+    model_nb_cv <- naiveBayes(X_train_cv_std, y_train_cv)
+    pred_nb_cv <- predict(model_nb_cv, X_test_cv_std)
+    results[i, "nb"] <- mean(pred_nb_cv == y_test_cv)
+  }
+  
+  return(results)
+}
+```
+
+Cross-validation dla wszystkich cech:
+
+```{r cv_tabelka1}
+cv_results_all <- cv_evaluate(dane, cechy_wszystkie)
+
+# Średnie wyniki
+cv_means_all <- colMeans(cv_results_all[, -1])
+cv_sds_all <- apply(cv_results_all[, -1], 2, sd)
+
+cv_summary_all <- data.frame(
+  Metoda = names(cv_means_all),
+  Srednia = cv_means_all,
+  Odchylenie_std = cv_sds_all
+)
+
+kable(cv_summary_all, digits = 4, row.names = FALSE)
+```
+
+Cross-validation dla top 5 cech:
+
+```{r cv_tabelka2}
+cv_results_top5 <- cv_evaluate(dane, cechy_top5)
+
+cv_means_top5 <- colMeans(cv_results_top5[, -1])
+cv_sds_top5 <- apply(cv_results_top5[, -1], 2, sd)
+
+cv_summary_top5 <- data.frame(
+  Metoda = names(cv_means_top5),
+  Srednia = cv_means_top5,
+  Odchylenie_std = cv_sds_top5
+)
+
+kable(cv_summary_top5, digits = 4, row.names = FALSE)
+```
+
+**Podsumowanie najlepszych wyników**
+
+```{r podsumowanie}
+najlepsze_wyniki <- data.frame(
+  Metoda = c("k-NN", "Drzewo k.", "Bayes"),
+  Najlepszy_parametr = c("k=5", "cp=0.01", "standard."),
+  Dokladnosc_pojedynczy_podzial = c(max(knn_results$accuracy_test), 
+                                    max(tree_results$accuracy_test),
+                                    max(wyniki_pojedynczy$nb$accuracy)),
+  Dokladnosc_CV_wszystkie = c(max(cv_means_all[1:3]), 
+                              max(cv_means_all[4:5]), 
+                              cv_means_all[6]),
+  Dokladnosc_CV_top5 = c(max(cv_means_top5[1:3]), 
+                         max(cv_means_top5[4:5]), 
+                         cv_means_top5[6])
+)
+```
+
+```{r wynik_wykres}
+final_comparison <- data.frame(
+  Metoda = rep(c("k-NN", "Drzewo", "Naiwny Bayes"), 2),
+  Zestaw_cech = rep(c("Wszystkie", "Top 5"), each = 3),
+  Dokladnosc = c(cv_means_all[c(2, 5, 6)], cv_means_top5[c(2, 5, 6)])
+)
+
+p_final <- ggplot(final_comparison, aes(x = Metoda, y = Dokladnosc, fill = Zestaw_cech)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Porównanie dokładności metod klasyfikacji",
+       y = "Dokładność (Cross-Validation)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p_final
+```
+
+```{r najlepsza_metoda}
+najlepsza_metoda <- najlepsze_wyniki$Metoda[which.max(najlepsze_wyniki$Cross_validation)]
+najlepsza_dokladnosc <- max(najlepsze_wyniki$Cross_validation)
+```
+
+**GŁÓWNE WNIOSKI**
+
+1. Najlepszą metodą okazał się Naiwny Bayes.
+
+2. Selekcja cech (top 5) wpłynęła na wyniki pozytywnie
+
+```{r wyniki}
+    #ifelse(mean(c(wyniki_top5$knn, wyniki_top5$tree, wyniki_top5$nb)) > 
+     #      mean(c(wyniki_wszystkie$knn, wyniki_wszystkie$tree, wyniki_wszystkie$nb)), 
+      #     "pozytywnie", "negatywnie")
+```
+
+
+3. Różnica między zbiorem treningowym a testowym wskazuje na dobra generalizację
+
+4. Cross-validation dało bardziej wiarygodne wyniki niż pojedynczy podział
+
+5. Wszystkie metody osiągnęły wysoką dokładność (>90%) na tym zbiorze danych
+
+
+## e) Wnioski końcowe
+
+### Najlepsze podzbiory zmiennych i parametry
+
+#### A) Podzbiory zmiennych
+
+- **Wszystkie cechy (13 zmiennych)**: Średnia dokładność CV = **0.929**
+- **Top 5 cech dyskryminacyjnych**: Średnia dokładność CV = **0.9383**
+
+> **Wniosek**: Selekcja cech (**top 5**) poprawiła wyniki o **0.93 punktu procentowego**.
+
+Najlepsze cechy dyskryminacyjne:
+
+1. **V7**
+
+2. **V12**
+
+3. **V13**
+
+4. **V11**
+
+5. **V1**
+
+#### B) Optymalne parametry
+
+- **k-NN**: Najlepsze k = **5** (dokładność testowa: **1**)
+
+- **Drzewo klasyfikacyjne**: Najlepsze cp = **0.001** (dokładność testowa: **0.9808**)
+
+- **Naiwny Bayes**: Standaryzacja **nie wpłynęła na wyniki** (**100% w obu przypadkach**)
+
+---
+
+### Ranking metod klasyfikacyjnych
+
+Ranking metod (według cross-validation na wszystkich cechach):
+
+1. **Naiwny Bayes** – dokładność: **0.9775 ± 0.0291**
+2. **k-NN (k=5)** – dokładność: **0.9611 ± 0.0457**
+3. **k-NN (k=7)** – dokładność: **0.9608 ± 0.0459**
+4. **k-NN (k=3)** – dokładność: **0.9556 ± 0.0683**
+5. **Drzewo (cp=0.001)** – dokładność: **0.8595 ± 0.0397**
+6. **Drzewo (cp=0.01)** – dokładność: **0.8595 ± 0.0397**
+
+> **Najlepsza metoda**: **Naiwny Bayes**
+> **Najgorsza metoda**: **Drzewo (cp=0.01)** 
+> **Różnica**: **11.8 punktu procentowego**
+
+Stabilność metod (odchylenie standardowe w CV):
+
+- **Najbardziej stabilna**: **Naiwny Bayes** *(std = 0.0291)*
+- **Najmniej stabilna**: **k-NN (k=3)** *(std = 0.0683)*
+
+---
+
+### Wpływ schematu oceny na wnioski
+
+#### A) Porównanie pojedynczy podział vs cross-validation
+
+| Metoda  | Pojedynczy podział | Cross-validation | Różnica |
+|---------|--------------------|-----------------|---------|
+| **k-NN (k=5)** | **1.0000** | **0.9611** | **-0.0389** |
+| **Drzewo (cp=0.01)** | **0.9808** | **0.8595** | **-0.1213** |
+| **Naiwny Bayes** | **1.0000** | **0.9775** | **-0.0225** |
+
+#### B) Analiza overfittingu (zbiór treningowy vs testowy)
+
+- **k-NN**: Różnica treningowy-testowy = **0%**
+- **Drzewo**: Różnica treningowy-testowy = **-2.05%**
+- **Naiwny Bayes**: **100% na obu zbiorach** → Brak overfittingu
+
+---
+
+### Kluczowe wnioski końcowe
+
+#### Najlepsza konfiguracja
+- **Metoda**: **Naiwny Bayes**
+- **Zestaw cech**: **Top 5 cech**
+- **Osiągnięta dokładność**: **0.9775**
+
+#### Hierarchia skuteczności metod
+- **Naiwny Bayes** → **NAJSKUTECZNIEJSZY**  
+- **Metoda odporna na przekleństwo wymiarowości**  
+- **Doskonała wydajność na surowych i standaryzowanych danych**
+
+#### Wpływ selekcji cech
+- **Selekcja cech ZNACZĄCO poprawiła wyniki**
+- **Najważniejsze cechy**: **V7, V12, V13**
+
+#### Znaczenie schematu oceny
+- **Cross-validation dało bardziej WIARYGODNE wyniki**
+- **Pojedynczy podział może prowadzić do ZNACZĄCO RÓŻNYCH wniosków**
+- **Standardowe odchylenia w CV wskazują na stabilność metod**
+
+#### Charakterystyka zbioru danych Wine
+- **Stosunkowo łatwy do klasyfikacji** *(wszystkie metody >90%)*
+- **Cecha V7 (Flavanoids) ma najlepszą zdolność dyskryminacyjną**
+- **Wymagana standaryzacja ze względu na różne skale** *(V13 ma wariancję $10^4$ większą)*
+
+---
