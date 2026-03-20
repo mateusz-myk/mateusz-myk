@@ -1,6 +1,6 @@
 # Mateusz Wizner – Portfolio & Projekty
 
-Cześć! W tym repozytorium zbieram projekty, które realizowałem podczas studiów, kursów oraz własnych eksperymentów. To mieszanka tematów z ML/DL, Data Science, C++/C#/Python, symulacji oraz analizy danych — wszystko, co mnie ciekawi i pozwala rozwijać umiejętności.
+Cześć! W tym repozytorium zbieram projekty, które realizowałem podczas studiów, kursów oraz własnych eksperymentów. To mieszanka tematów z ML/DL, Data Science, C++/C#/Python, symulacji oraz analizy danych.
 
 ## Zakres umiejętności
 
