@@ -21,8 +21,7 @@ Witaj! To moje repozytorium portfolio, zawierające różnorodne projekty z dzie
 | Symulacje | 3-Body Problem Simulator |
 
 ## Jak używać
-- Każdy folder ma własny README.md z opisem, setupem i wynikami
-- Kod gotowy do uruchomienia (requirements.txt gdzie potrzebne)
+- Każdy folder ma własny README.md z opisem
 - Licencja: MIT (używać swobodnie z podaniem autora)
 
 ## Kontakt
