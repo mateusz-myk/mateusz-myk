@@ -1,0 +1,233 @@
+<UserControl x:Class="Kalendarz.Views.CalendarView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:helpers="clr-namespace:Kalendarz.Helpers"
+    mc:Ignorable="d"
+    d:DesignHeight="700" d:DesignWidth="1200"
+    Focusable="True"
+    KeyDown="UserControl_KeyDown"
+    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBackgroundConverter}}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Górny panel z przyciskami -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+            <Button Content="Powrót" Command="{Binding BackCommand}" Width="80" DockPanel.Dock="Left"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <TextBlock Text="  " />
+            <TextBlock Text="{Binding Plan.Name}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"
+                       Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+
+            <!-- Przyciski przełączania planów i data — po prawej stronie -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right" VerticalAlignment="Center">
+                <ItemsControl ItemsSource="{Binding DataContext.Plans, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Name}" Margin="4,0,0,0" Padding="8,4"
+                                    Command="{Binding DataContext.SwitchPlanCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,4,0">
+                    <TextBlock x:Name="TodayLabel" FontWeight="SemiBold"
+                               Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                    <TextBlock Text=", "
+                               Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                    <TextBlock x:Name="CurrentTimeLabel" FontWeight="SemiBold"
+                               Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                </StackPanel>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Kalendarz -->
+        <Border Grid.Row="1" BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" BorderThickness="1" Padding="10"
+                Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeSecondaryBackgroundConverter}}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" 
+                          ScrollChanged="ScrollViewer_ScrollChanged">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Nagłówki dni tygodnia -->
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="Poniedziałek" HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                        <TextBlock Grid.Column="1" Text="Wtorek" HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                        <TextBlock Grid.Column="2" Text="Środa" HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                        <TextBlock Grid.Column="3" Text="Czwartek" HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                        <TextBlock Grid.Column="4" Text="Piątek" HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                        <TextBlock Grid.Column="5" Text="Sobota" HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                        <TextBlock Grid.Column="6" Text="Niedziela" HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                    </Grid>
+
+                    <!-- Dni kalendarza (7 kolumn, automatyczna liczba wierszy) -->
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Days}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="7" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Height="80">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Margin" Value="2" />
+                                            <Setter Property="Background" Value="White" />
+                                            <Setter Property="BorderBrush" Value="#FF999999" />
+                                            <Setter Property="BorderThickness" Value="1" />
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <!-- Pusty dzień (placeholder) - niewidoczny -->
+                                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                                    <Setter Property="Visibility" Value="Hidden" />
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="BorderThickness" Value="0" />
+                                                </DataTrigger>
+                                                <!-- Weekend (sobota/niedziela) - jasnoszare tło -->
+                                                <DataTrigger Binding="{Binding IsWeekend}" Value="True">
+                                                    <Setter Property="Background" Value="#FFE8E8E8" />
+                                                </DataTrigger>
+                                                <!-- Własny kolor użytkownika (z wydarzeniem) - nadpisuje weekend -->
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding HasEvent}" Value="True" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Background" Value="{Binding BackgroundColor}" />
+                                                </MultiDataTrigger>
+                                                <!-- Dzisiejszy dzień - czerwona ramka (nadpisuje wszystko) -->
+                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="#FFFF4444" />
+                                                    <Setter Property="BorderThickness" Value="6" />
+                                                </DataTrigger>
+                                                <!-- Pierwszy dzień miesiąca - etykieta miesiąca -->
+                                                <DataTrigger Binding="{Binding IsFirstDayOfMonth}" Value="True">
+                                                    <Setter Property="Margin" Value="2" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Dodaj/Edytuj wydarzenie" Click="EditDay_Click" />
+                                            <MenuItem Header="Usuń wydarzenie" Click="DeleteEvent_Click" />
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                    <Border.ToolTip>
+                                        <ToolTip Visibility="{Binding HasEvent, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel MaxWidth="300" Margin="4">
+                                                <TextBlock FontWeight="Bold" TextWrapping="Wrap">
+                                                    <Run Text="{Binding Date, StringFormat='dd MMMM yyyy', ConverterCulture='pl-PL'}" />
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </Border.ToolTip>
+                                    <Grid>
+                                        <!-- Nazwa miesiąca dla pierwszego dnia - nad komórką -->
+                                        <TextBlock Text="{Binding MonthYearLabel}" FontSize="12" FontWeight="Bold" 
+                                                   Foreground="White" Background="#AA000080" Padding="6,3"
+                                                   Margin="0,-25,0,0" VerticalAlignment="Top" 
+                                                   HorizontalAlignment="Center" TextWrapping="Wrap"
+                                                   Visibility="{Binding IsFirstDayOfMonth, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                        <!-- Dwie gwiazdki dla dzisiejszego dnia - lewy górny róg -->
+                                        <TextBlock Text="⭐⭐" FontSize="16" 
+                                                   VerticalAlignment="Top" HorizontalAlignment="Left" Margin="5,2,0,0"
+                                                   Visibility="{Binding IsToday, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                        <!-- Gwiazdka w prawym górnym rogu jeśli jest wydarzenie -->
+                                        <TextBlock Text="★" FontSize="20" Foreground="Gold" 
+                                                   VerticalAlignment="Top" HorizontalAlignment="Right" Margin="5,5,5,0"
+                                                   Visibility="{Binding HasEvent, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                        <!-- Numer dnia i opis obok siebie w poziomie -->
+                                        <Grid Margin="5,24,5,5" VerticalAlignment="Top">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Numer dnia -->
+                                            <TextBlock Grid.Column="0" Text="{Binding DayNumber}" FontSize="18" FontWeight="Bold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="Black" />
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                <Setter Property="Foreground" Value="Black" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <!-- Opis wydarzenia po prawej stronie numeru -->
+                                            <TextBlock Grid.Column="1" Text="{Binding Description}" FontSize="11" 
+                                                       TextTrimming="CharacterEllipsis" MaxHeight="50" TextWrapping="Wrap"
+                                                       Margin="8,2,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="Black" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                <Setter Property="Foreground" Value="Black" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

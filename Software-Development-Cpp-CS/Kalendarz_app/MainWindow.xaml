@@ -1,0 +1,46 @@
+﻿<Window x:Class="Kalendarz.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Kalendarz"
+        xmlns:vm="clr-namespace:Kalendarz.ViewModels"
+        xmlns:views="clr-namespace:Kalendarz.Views"
+        xmlns:helpers="clr-namespace:Kalendarz.Helpers"
+        mc:Ignorable="d"
+        Title="Kalendarz" 
+        Height="800" Width="1500"
+        ResizeMode="CanMinimize"
+        WindowState="Normal"
+        WindowStartupLocation="CenterScreen"
+        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBackgroundConverter}}">
+    <Window.Resources>
+        <!-- Map ViewModel types to Views using DataTemplates -->
+        <DataTemplate DataType="{x:Type vm:WeekViewModel}">
+            <views:WeekView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:StudentsViewModel}">
+            <views:StudentsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CalendarViewModel}">
+            <views:CalendarView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:FileManagerViewModel}">
+            <views:FileManagerView />
+        </DataTemplate>
+
+        <!-- BooleanToVisibilityConverter -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Window.Resources>
+
+    <!-- Główna siatka: tylko część z widokami (panel notatek po prawej usunięty) -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Miejsce gdzie zostanie załadowany aktualny View (StartView / WeekView) -->
+        <ContentControl Content="{Binding CurrentView}"
+                        Margin="10" />
+    </Grid>
+</Window>

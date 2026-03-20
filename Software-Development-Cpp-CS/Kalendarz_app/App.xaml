@@ -1,0 +1,14 @@
+﻿<Application x:Class="Kalendarz.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Kalendarz"
+             xmlns:converters="clr-namespace:Kalendarz.Converters"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <converters:ThemeBackgroundConverter x:Key="ThemeBackgroundConverter" />
+        <converters:ThemeForegroundConverter x:Key="ThemeForegroundConverter" />
+        <converters:ThemeBorderBrushConverter x:Key="ThemeBorderBrushConverter" />
+        <converters:ThemeButtonBackgroundConverter x:Key="ThemeButtonBackgroundConverter" />
+        <converters:ThemeSecondaryBackgroundConverter x:Key="ThemeSecondaryBackgroundConverter" />
+    </Application.Resources>
+</Application>

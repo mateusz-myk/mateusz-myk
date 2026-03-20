@@ -1,0 +1,38 @@
+<Window x:Class="Kalendarz.Views.PinDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:helpers="clr-namespace:Kalendarz.Helpers"
+        Title="Wprowadź PIN" Height="180" Width="300"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBackgroundConverter}}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Wprowadź PIN:" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+
+        <PasswordBox x:Name="PinPasswordBox" Grid.Row="1" FontSize="16" Height="32" Margin="0,0,0,10" 
+                     PasswordChar="●" MaxLength="4" />
+
+        <TextBlock x:Name="ErrorLabel" Grid.Row="2" Text="" Foreground="Red" FontSize="12" Margin="0,0,0,10" 
+                   Visibility="Collapsed" />
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK" Width="80" Height="28" Margin="0,0,8,0" Click="OK_Click" IsDefault="True"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="Anuluj" Width="80" Height="28" Click="Cancel_Click" IsCancel="True"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+        </StackPanel>
+    </Grid>
+</Window>

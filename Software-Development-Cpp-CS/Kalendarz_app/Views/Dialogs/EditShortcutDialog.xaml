@@ -1,0 +1,179 @@
+<Window x:Class="Kalendarz.Views.Dialogs.EditShortcutDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:helpers="clr-namespace:Kalendarz.Helpers"
+        Title="Edytuj skrót" Height="650" Width="450"
+        WindowStartupLocation="CenterOwner"
+        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBackgroundConverter}}"
+        ResizeMode="NoResize">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Nazwa planu (tylko do odczytu) -->
+        <TextBlock Grid.Row="0" Text="Plan:" FontWeight="Bold" Margin="0,0,0,4"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <TextBox Grid.Row="1" x:Name="PlanNameTextBox" Height="28" Margin="0,0,0,12"
+                 IsReadOnly="True"
+                 Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeSecondaryBackgroundConverter}}"
+                 Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                 BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+
+        <!-- Kolor tła -->
+        <TextBlock Grid.Row="2" Text="Kolor tła:" FontWeight="Bold" Margin="0,0,0,4"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,12">
+            <Border x:Name="BackgroundColorPreview" Width="60" Height="28" BorderBrush="Black" BorderThickness="1" Margin="0,0,8,0" />
+            <Button Content="Wybierz kolor" Click="BackgroundColorButton_Click" Width="100"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+        </StackPanel>
+
+        <!-- Kolor ikony -->
+        <TextBlock Grid.Row="4" Text="Kolor ikony:" FontWeight="Bold" Margin="0,0,0,4"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,12">
+            <Border x:Name="IconColorPreview" Width="60" Height="28" BorderBrush="Black" BorderThickness="1" Margin="0,0,8,0" />
+            <Button Content="Wybierz kolor" Click="IconColorButton_Click" Width="100"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+        </StackPanel>
+
+        <!-- Kolor nazwy -->
+        <TextBlock Grid.Row="6" Text="Kolor nazwy:" FontWeight="Bold" Margin="0,0,0,4"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <StackPanel Grid.Row="7" Orientation="Horizontal" Margin="0,0,0,12">
+            <Border x:Name="NameColorPreview" Width="60" Height="28" BorderBrush="Black" BorderThickness="1" Margin="0,0,8,0" />
+            <Button Content="Wybierz kolor" Click="NameColorButton_Click" Width="100"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+        </StackPanel>
+
+        <!-- Rozmiar czcionki nazwy -->
+        <TextBlock Grid.Row="8" Text="Rozmiar czcionki nazwy:" FontWeight="Bold" Margin="0,0,0,4"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <TextBox Grid.Row="9" x:Name="NameFontSizeTextBox" Height="28" Margin="0,0,0,12"
+                 Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeSecondaryBackgroundConverter}}"
+                 Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                 BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+
+        <!-- Rozmiar skrótu -->
+        <TextBlock Grid.Row="10" Text="Rozmiar skrótu:" FontWeight="Bold" Margin="0,0,0,4"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <StackPanel Grid.Row="11" Orientation="Vertical" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Text="Szerokość:" Width="80" VerticalAlignment="Center"
+                           Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                <Button Content="-" Width="30" Height="28" Click="DecreaseWidth_Click" Margin="0,0,4,0"
+                        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                        Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                        BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+                <TextBox x:Name="WidthTextBox" Width="80" Height="28" Margin="0,0,4,0" TextChanged="SizeTextBox_TextChanged"
+                         Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeSecondaryBackgroundConverter}}"
+                         Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                         BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+                <Button Content="+" Width="30" Height="28" Click="IncreaseWidth_Click"
+                        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                        Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                        BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Wysokość:" Width="80" VerticalAlignment="Center"
+                           Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                <Button Content="-" Width="30" Height="28" Click="DecreaseHeight_Click" Margin="0,0,4,0"
+                        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                        Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                        BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+                <TextBox x:Name="HeightTextBox" Width="80" Height="28" Margin="0,0,4,0" TextChanged="SizeTextBox_TextChanged"
+                         Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeSecondaryBackgroundConverter}}"
+                         Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                         BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+                <Button Content="+" Width="30" Height="28" Click="IncreaseHeight_Click"
+                        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                        Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                        BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Ikonka (wybierz) -->
+        <WrapPanel Grid.Row="12" Margin="0,0,0,12">
+            <Button Content="🎓" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="🎓"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="💼" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="💼"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="📅" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="📅"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="👤" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="👤"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="📁" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="📁"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="📂" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="📂"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="📋" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="📋"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="📝" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="📝"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="📊" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="📊"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="📚" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="📚"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="🏫" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="🏫"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="🎨" FontSize="24" Width="40" Height="40" Margin="2" Click="SelectIcon_Click" Tag="🎨"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+        </WrapPanel>
+
+        <!-- Przyciski -->
+        <StackPanel Grid.Row="13" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK" IsDefault="True" Click="OK_Click" Width="80" Margin="0,0,8,0"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="Anuluj" IsCancel="True" Width="80"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+        </StackPanel>
+    </Grid>
+</Window>

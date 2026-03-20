@@ -1,0 +1,82 @@
+<Window x:Class="Kalendarz.Views.AddEditZajeciaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:helpers="clr-namespace:Kalendarz.Helpers"
+        Title="Dodaj / Edytuj zajęcia" Height="300" Width="400"
+        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBackgroundConverter}}">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Text="Tytuł:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <TextBox Text="{Binding TitleText, RelativeSource={RelativeSource AncestorType=Window}}" Grid.Row="0" Grid.Column="1" Margin="6,2" />
+
+        <TextBlock Text="Numer:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <TextBox Text="{Binding SerialNumberString, RelativeSource={RelativeSource AncestorType=Window}}" Grid.Row="1" Grid.Column="1" Margin="6,2" />
+
+        <TextBlock Text="Dzień:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <ComboBox Grid.Row="2" Grid.Column="1" Margin="6,2" SelectedValue="{Binding Day, RelativeSource={RelativeSource AncestorType=Window}}" SelectedValuePath="Tag">
+            <ComboBoxItem Tag="{x:Static sys:DayOfWeek.Monday}">Poniedziałek</ComboBoxItem>
+            <ComboBoxItem Tag="{x:Static sys:DayOfWeek.Tuesday}">Wtorek</ComboBoxItem>
+            <ComboBoxItem Tag="{x:Static sys:DayOfWeek.Wednesday}">Środa</ComboBoxItem>
+            <ComboBoxItem Tag="{x:Static sys:DayOfWeek.Thursday}">Czwartek</ComboBoxItem>
+            <ComboBoxItem Tag="{x:Static sys:DayOfWeek.Friday}">Piątek</ComboBoxItem>
+            <ComboBoxItem Tag="{x:Static sys:DayOfWeek.Saturday}">Sobota</ComboBoxItem>
+            <ComboBoxItem Tag="{x:Static sys:DayOfWeek.Sunday}">Niedziela</ComboBoxItem>
+        </ComboBox>
+
+        <TextBlock Text="Start (HH:mm):" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <TextBox Text="{Binding StartString, RelativeSource={RelativeSource AncestorType=Window}}" Grid.Row="3" Grid.Column="1" Margin="6,2" />
+
+        <TextBlock Text="End (HH:mm):" Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <TextBox Text="{Binding EndString, RelativeSource={RelativeSource AncestorType=Window}}" Grid.Row="4" Grid.Column="1" Margin="6,2" />
+
+        <!-- Kolor -->
+        <TextBlock Text="Kolor:" Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <ComboBox Grid.Row="5" Grid.Column="1" Margin="6,2" SelectedValue="{Binding Color, RelativeSource={RelativeSource AncestorType=Window}}" SelectedValuePath="Tag">
+            <ComboBoxItem Tag="#FFBEE6FD">Niebieski</ComboBoxItem>
+            <ComboBoxItem Tag="#FFFDD7BE">Pomarańczowy</ComboBoxItem>
+            <ComboBoxItem Tag="#FFDFFFBF">Zielony</ComboBoxItem>
+            <ComboBoxItem Tag="#FFE6BEFD">Fioletowy</ComboBoxItem>
+            <ComboBoxItem Tag="#FFFFFFFF">Biały</ComboBoxItem>
+            <ComboBoxItem Tag="#FFFFC0CB">Różowy</ComboBoxItem>
+            <ComboBoxItem Tag="#FFFFE599">Żółty</ComboBoxItem>
+            <ComboBoxItem Tag="#FFBDECB6">Miętowy</ComboBoxItem>
+            <ComboBoxItem Tag="#FFB0C4DE">Stalowy</ComboBoxItem>
+            <ComboBoxItem Tag="#FFFFB6C1">Jasnoczerwony</ComboBoxItem>
+        </ComboBox>
+        <!-- Opis tekstowy zajęć -->
+        <TextBlock Text="Opis:" Grid.Row="6" Grid.Column="0" VerticalAlignment="Top" Margin="0,2"
+                   Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+        <TextBox Text="{Binding Description, RelativeSource={RelativeSource AncestorType=Window}}" Grid.Row="6" Grid.Column="1" Margin="6,2" AcceptsReturn="True" Height="60" />
+        <StackPanel Orientation="Horizontal" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Right">
+            <Button Content="OK" Width="80" Margin="4" Click="Ok_Click"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            <Button Content="Anuluj" Width="80" Margin="4" Click="Cancel_Click"
+                    Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                    Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                    BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+        </StackPanel>
+    </Grid>
+</Window>

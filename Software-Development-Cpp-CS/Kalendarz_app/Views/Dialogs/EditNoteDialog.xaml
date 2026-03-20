@@ -1,0 +1,109 @@
+<Window x:Class="Kalendarz.Views.Dialogs.EditNoteDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:helpers="clr-namespace:Kalendarz.Helpers"
+        Title="Edycja notatki" Height="650" Width="500"
+        WindowStartupLocation="CenterOwner"
+        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBackgroundConverter}}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="150" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Tytuł -->
+            <TextBlock Grid.Row="0" Text="Tytuł:" FontWeight="Bold" Margin="0,0,0,4"
+                       Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            <TextBox Grid.Row="1" x:Name="TitleTextBox" 
+                     Height="28"
+                     Margin="0,0,0,12" />
+
+            <!-- Opis -->
+            <TextBlock Grid.Row="2" Text="Opis:" FontWeight="Bold" Margin="0,0,0,4"
+                       Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            <TextBox Grid.Row="3" x:Name="DescriptionTextBox" 
+                     AcceptsReturn="True" TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     Margin="0,0,0,12" />
+
+            <!-- Kolor -->
+            <TextBlock Grid.Row="4" Text="Kolor:" FontWeight="Bold" Margin="0,0,0,4"
+                       Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,12">
+                <Border x:Name="ColorPreview" Width="60" Height="28" BorderBrush="Black" BorderThickness="1" Margin="0,0,8,0" />
+                <Button Content="Wybierz kolor" Click="SelectColor_Click" Width="100"
+                        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                        Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                        BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            </StackPanel>
+
+            <!-- Rodzaj czcionki -->
+            <TextBlock Grid.Row="6" Text="Czcionka:" FontWeight="Bold" Margin="0,0,0,4"
+                       Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            <ComboBox Grid.Row="6" x:Name="FontFamilyComboBox" 
+                      Height="28" Margin="0,24,0,12">
+                <ComboBoxItem Content="Segoe UI" />
+                <ComboBoxItem Content="Arial" />
+                <ComboBoxItem Content="Calibri" />
+                <ComboBoxItem Content="Times New Roman" />
+                <ComboBoxItem Content="Courier New" />
+                <ComboBoxItem Content="Verdana" />
+                <ComboBoxItem Content="Georgia" />
+                <ComboBoxItem Content="Comic Sans MS" />
+            </ComboBox>
+
+            <!-- Formatowanie tytułu -->
+            <TextBlock Grid.Row="7" Text="Formatowanie tytułu:" FontWeight="Bold" Margin="0,0,0,4"
+                       Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            <StackPanel Grid.Row="7" Orientation="Horizontal" Margin="0,24,0,12">
+                <TextBlock Text="Rozmiar:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                <TextBox x:Name="TitleFontSizeTextBox" Width="50" Height="28" Margin="0,0,16,0" />
+                <CheckBox x:Name="TitleBoldCheckBox" Content="Pogrubienie" VerticalAlignment="Center"
+                          Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            </StackPanel>
+
+            <!-- Formatowanie opisu -->
+            <TextBlock Grid.Row="8" Text="Formatowanie opisu:" FontWeight="Bold" Margin="0,0,0,4"
+                       Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            <StackPanel Grid.Row="8" Orientation="Horizontal" Margin="0,24,0,12">
+                <TextBlock Text="Rozmiar:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                <TextBox x:Name="DescFontSizeTextBox" Width="50" Height="28" Margin="0,0,16,0" />
+                <CheckBox x:Name="DescBoldCheckBox" Content="Pogrubienie" VerticalAlignment="Center"
+                          Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            </StackPanel>
+
+            <!-- Rozmiar notatki -->
+            <TextBlock Grid.Row="9" Text="Rozmiar notatki (szerokość x wysokość):" FontWeight="Bold" Margin="0,0,0,4"
+                       Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+            <StackPanel Grid.Row="9" Orientation="Horizontal" Margin="0,24,0,12">
+                <TextBox x:Name="WidthTextBox" Width="80" Height="28" Margin="0,0,8,0" />
+                <TextBlock Text=" x " VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}" />
+                <TextBox x:Name="HeightTextBox" Width="80" Height="28" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="10" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <Button Content="OK" IsDefault="True" Click="OK_Click" Width="80" Margin="0,0,8,0"
+                        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                        Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                        BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+                <Button Content="Anuluj" IsCancel="True" Width="80"
+                        Background="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeButtonBackgroundConverter}}"
+                        Foreground="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeForegroundConverter}}"
+                        BorderBrush="{Binding Source={x:Static helpers:ThemeManager.Instance}, Path=IsDarkTheme, Converter={StaticResource ThemeBorderBrushConverter}}" />
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Window>
