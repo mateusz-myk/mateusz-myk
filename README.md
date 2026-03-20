@@ -1,19 +1,33 @@
-# Portfolio Analityczne – Projekty Statystyczne i Optymalizacyjne
+# Mateusz Myk - Portfolio & Projekty
 
-Witaj w moim repozytorium! Znajdują się tutaj projekty z zakresu analizy danych, statystyki matematycznej oraz badań operacyjnych, realizowane w językach **R**, **Python**, Cpp.
+Witaj! To moje repozytorium portfolio, zawierające różnorodne projekty z dziedzin Uczenia Maszynowego, Deep Learning, Data Science, Software Development (C++/C#/Python) oraz Analizy Danych. Powstały głównie w ramach studiów i kursów.
 
-## 📂 Struktura Projektów
+## Zakres umiejętności
+- ML/DL: CNN (CIFAR-10), sieci neuronowe od zera (MNIST), ViT, MCTS/AlphaBeta
+- Data Science: SQL, R (survival analysis, time series, EDA), regresje liniowe
+- Backend/Systems: C++ (drzewa binarne, Sokoban), C# WPF (Organizer)
+- Symulacje: 3-Body Problem (Pygame), fizyka Newtona
+- Narzędzia: PyTorch, NumPy, scikit-learn, R (ggplot2, forecast), GitHub Copilot
 
-Repozytorium zostało podzielone na sekcje tematyczne, z których każda zawiera pełną dokumentację oraz kody źródłowe:
+## Projekty (kliknij folder)
 
----
-## 🛠️ Wykorzystane Narzędzia
-* **Języki:** R, Python
-* **Raportowanie:** R Markdown (PDF/HTML), Jupyter Notebooks
-* **Główne biblioteki:** * `R`: forecast, ggplot2, knitr, patchwork
-  * `Python`: pulp, pandas, numpy
+| Kategoria | Przykłady |
+|-----------|-----------|
+| ML/Deep Learning | CIFAR-10 CNN, MNIST NN, regresje |
+| Gry/AI | Tic-Tac-Toe MCTS, AlphaBeta |
+| Data Engineering | SQL + Faker data gen |
+| C++/C# | Binary Trees, Sokoban, WPF App |
+| R/Statystyka | Survival Analysis, Time Series |
+| Symulacje | 3-Body Problem Simulator |
 
-## 👤 Kontakt
-**Mateusz Wizner**
-* Student Analityki Gospodarczej / Metod Ilościowych
-* [Twój profil LinkedIn - opcjonalnie]
+## Jak używać
+- Każdy folder ma własny README.md z opisem, setupem i wynikami
+- Kod gotowy do uruchomienia (requirements.txt gdzie potrzebne)
+- Licencja: MIT (używać swobodnie z podaniem autora)
+
+## Kontakt
+- GitHub: mateusz-myk
+- Lokalizacja: Wrocław, Polska
+- Studia: Matematyka Politechnika Wrocławska
+
+Repo aktywnie rozwijane.
