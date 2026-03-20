@@ -9,7 +9,7 @@ Witaj! To moje repozytorium portfolio, zawierające różnorodne projekty z dzie
 - Symulacje: 3-Body Problem (Pygame), fizyka Newtona
 - Narzędzia: PyTorch, NumPy, scikit-learn, R (ggplot2, forecast), GitHub Copilot
 
-## Projekty (kliknij folder)
+## Projekty
 
 | Kategoria | Przykłady |
 |-----------|-----------|
