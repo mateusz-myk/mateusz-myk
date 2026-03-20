@@ -1,0 +1,1038 @@
+---
+title: "Sprawozdanie 1"
+author: "Mateusz Wizner 277508"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+subtitle: "Analiza Przeżycia"
+fontsize: 12pt
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    toc_depth: 3
+    number_sections: false
+header-includes:
+  - \usepackage{polyglossia}
+  - \setdefaultlanguage{polish}
+  - \usepackage{xcolor}
+  - \definecolor{myblue}{HTML}{D0E9F9}
+  - \definecolor{myyellow}{HTML}{FFFACD}
+  - \usepackage{graphicx}
+  - \usepackage{float}
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE, 
+  warning = FALSE,
+  fig.pos = "H",
+  out.extra = "",
+  fig.align = "center"
+)
+```
+
+```{r biblio}
+library(ggplot2)
+library(patchwork)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+```
+
+# Wprowadzenie
+
+Niniejszy raport zawiera implementację zadań z List 1, 2, 3 i 4.
+
+## Lista 1
+
+Dystrybuanta rozkładu EW ma postać:
+
+$$F(t;\alpha, \beta, \gamma) = \{ 1 - \exp [ - ( t / \beta )^{\alpha}]\}^{\gamma}$$
+
+Rozkład EW może przyjmować różne kształty funkcji hazardu: stałą, malejącą, rosnącą, wannową lub jednomodalną.
+
+### Zadanie 1: Funkcje rozkładu
+
+```{r zad11}
+# Funkcje gęstości, dystrybuanty, kwantylowej i hazardu
+dwb = function(t, a, b, g) {
+  (a * g / b) * ((t / b)^(a - 1)) * (1 - exp(-(t / b)^a))^(g - 1) * exp(-(t / b)^a)
+}
+
+cdwb = function(t, a, b, g) {
+  (1 - exp(-(t / b)^a))^g
+}
+
+qwb = function(t, a, b, g) {
+  b * (-log(1 - t^(1 / g)))^(1 / a)
+}
+
+hwb = function(t, a, b, g) {
+  dwb(t, a, b, g) / (1 - cdwb(t, a, b, g))
+}
+```
+
+### Zadanie 2: Wykresy funkcji hazardu
+
+```{r zad12}
+
+x = seq(0, 6, by = 0.01)
+
+dane = list(
+  stala = data.frame(x, y = hwb(x, 1, 5/2, 1)),
+  malejaca = data.frame(x, y = hwb(x, 1/2, 2, 3/4)),
+  rosnaca = data.frame(x, y = hwb(x, 3/2, 2, 3)),
+  wannowa = data.frame(x, y = hwb(x, 2, 3, 0.25)),
+  jednomodalna = data.frame(x, y = hwb(x, 0.7, 0.7, 2))
+)
+
+ggplot() +
+  geom_line(data = dane$stala, aes(x, y, color = 'stały'), size = 1) +
+  geom_line(data = dane$malejaca, aes(x, y, color = 'malejący'), size = 1) +
+  geom_line(data = dane$rosnaca, aes(x, y, color = 'rosnący'), size = 1) +
+  geom_line(data = dane$wannowa, aes(x, y, color = 'wannowy'), size = 1) +
+  geom_line(data = dane$jednomodalna, aes(x, y, color = 'jednomodalny'), size = 1) +
+  scale_color_manual(
+    name = "Rozkład hazardu (a, b, y)",
+    values = c(
+      'stały'='red',
+      'malejący'='blue',
+      'rosnący'='green',
+      'wannowy'='orange',
+      'jednomodalny'='purple'
+    ),
+    labels = c(
+      'stały'='stały: a=1, b=2.5, y=1',
+      'malejący'='malejący: a=0.5, b=2, y=0.75',
+      'rosnący'='rosnący: a=1.5, b=2, y=3',
+      'wannowy'='wannowy: a=2, b=3, y=0.25',
+      'jednomodalny'='jednomodalny: a=0.7, b=0.7, y=2'
+    )
+  ) +
+  coord_cartesian(ylim = c(0, 3)) +
+  labs(
+    title = "Funkcje hazardu rozkładu EW(a, b, y)",
+    x = "x",
+    y = "h(x)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = c(0.97, 0.97),
+    legend.justification = c("right", "top"),
+    legend.background = element_rect(fill = alpha("white", 0.8), color = "grey80"),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 15)
+  )
+
+```
+
+### Zadanie 3: Generowanie zmiennych losowych
+
+**Generowanie zmiennych losowych z rozkładu EW(a, b, y)**
+
+Do generowania zmiennych losowych z rozkładu Weibulla korzystamy z metody *odwracania dystrybuanty*:
+
+$$X = F^{-1}(U) = \gamma + \beta (-\ln(1 - U))^{1/\alpha}, \quad U \sim U(0,1)$$
+```{r zad13}
+#set.seed(213)
+gen = function(n, a, b, g){
+  U = runif(n)
+  qwb(U, a, b, g)
+}
+```
+
+### Zadanie 4: Histogramy i gęstości
+
+```{r zad14}
+plot_density <- function(data, a, b, g, title){
+  x_min = max(min(data), 0.01) #bez 0
+  df = data.frame(x = seq(x_min, max(data)+0.5, length.out = 200))
+  df$y = dwb(df$x, a, b, g)
+  
+  ggplot() +
+    geom_histogram(aes(x = data, y = after_stat(density)), bins = 30,
+                   fill = "lightblue", color = "black", alpha = 0.5) +
+    geom_line(data = df, aes(x = x, y = y), color = "red", linewidth = 1) +
+    labs(title = title, x = "x", y = "gęstość") +
+    theme_minimal(base_size = 8) +
+    theme(plot.title = element_text(size = 8, margin = margin(b = 5)),
+          plot.margin = margin(10, 10, 10, 10))
+}
+
+gen.mal.50 = gen(50, 0.9, 2, 1)
+gen.mal.100 = gen(100, 0.9, 2, 1)
+gen.wan.50 = gen(50, 2, 3, 0.4)
+gen.wan.100 = gen(100, 2, 3, 0.4)
+
+p1 = plot_density(gen.mal.50, 0.9, 2, 1, "Malejąca (n=50) dla a=0.9, b=2, y=1")
+p2 = plot_density(gen.mal.100, 0.9, 2, 1, "Malejąca (n=100) dla a=0.9, b=2, y=1")
+p3 = plot_density(gen.wan.50, 2, 3, 0.5, "Wannowa (n=50) dla a=2, b=3, y=0.4")
+p4 = plot_density(gen.wan.100, 2, 3, 0.5, "Wannowa (n=100) dla a=2, b=3, y=0.4")
+
+(p1 | p2) / (p3 | p4)
+```
+
+### Zadanie 5: Statystyki opisowe
+
+```{r zad15}
+statystyki = data.frame(
+  Dane = c("Malejąca n=50", "Malejąca n=100", "Teoretyczna malejąca",
+           "Wannowa n=50", "Wannowa n=100", "Teoretyczna wannowa"),
+  Srednia = c(mean(gen.mal.50), mean(gen.mal.100), " ",
+              mean(gen.wan.50), mean(gen.wan.100), " "),
+  Mediana = c(median(gen.mal.50), median(gen.mal.100), qwb(0.5, 0.9, 2, 1),
+              median(gen.wan.50), median(gen.wan.100), qwb(0.5, 2, 3, 0.4)),
+  SD = c(sd(gen.mal.50), sd(gen.mal.100), " ",
+         sd(gen.wan.50), sd(gen.wan.100), " "),
+  Q1 = c(quantile(gen.mal.50, 0.25), quantile(gen.mal.100, 0.25), qwb(0.25, 0.9, 2, 1),
+         quantile(gen.wan.50, 0.25), quantile(gen.wan.100, 0.25), qwb(0.25, 2, 3, 0.4)),
+  Q3 = c(quantile(gen.mal.50, 0.75), quantile(gen.mal.100, 0.75), qwb(0.75, 0.9, 2, 1),
+         quantile(gen.wan.50, 0.75), quantile(gen.wan.100, 0.75), qwb(0.75, 2, 3, 0.4))
+)
+
+kable(statystyki)
+```
+
+## Lista 2
+
+### Zadanie 1: Programy do generowania zmiennych z GE
+
+```{r zadanie21, echo=TRUE}
+# u = wektor prawdopodobieństw z U(0,1)
+# a = alfa
+# l = lambda
+qge = function(u, a, l) {
+  (-log(1 - u^(1/a))) / l
+}
+
+# ---- (a) Typ I: cenzurowanie w ustalonym czasie t0 ----
+zad1.1 = function(n, t0, a, l) {
+  u = runif(n)
+  x = qge(u, a, l)
+  
+  delta = as.integer(x <= t0)
+  x_obs = pmin(x, t0)
+  
+  data.frame(Typ = "I (t0)", Czas = x_obs, Delta = delta, stringsAsFactors = FALSE)
+}
+
+# ---- (b) Typ II: cenzurowanie po m zdarzeniach ----
+zad1.2 = function(n, m, a, l) {
+  if (m > n) stop("Liczba zdarzeń m nie może być większa niż n.")
+  
+  u = runif(n)
+  x = sort(qge(u, a, l))
+  
+  t_cens = x[m]
+  
+  delta = c(rep(1L, m), rep(0L, n - m))
+  
+  x_obs = x
+  if (m < n) {
+    x_obs[(m+1):n] = t_cens
+  }
+  
+  data.frame(Typ = "II (m)", Czas = x_obs, Delta = delta, stringsAsFactors = FALSE)
+}
+
+# ---- (c) Cenzurowanie losowe (niezależne) ----
+zad1.3 = function(n, eta, a, l) {
+  x = qge(runif(n), a, l)
+  c = rexp(n, rate = 1/eta)
+  
+  delta = as.integer(x <= c) 
+  czas_obs = pmin(x, c)
+  
+  data.frame(Typ = "III (losowe)", Czas = czas_obs, Delta = delta, stringsAsFactors = FALSE)
+}
+```
+
+### Zadanie 2: Generowanie danych i statystyki opisowe
+
+Korzystając z powyższych funkcji, generujemy trzy zbiory danych o liczności $n=50$. Wybrano parametry:
+\[
+\alpha = 1.5, \quad \lambda = 0.5
+\]
+
+Rozsądne statystyki opisowe w przypadku danych cenzurowanych oznaczają, że ograniczamy się do prostych statystyk opisujących wygenerowany zbiór:
+
+- Liczba obserwacji ($n$)
+- Liczba zdarzeń kompletnych (remisji, $d$)
+- Odsetek danych cenzurowanych
+- Średni i medianowy czas obserwacji (wszystkie dane)
+- Średni i medianowy czas do remisji (tylko zdarzenia kompletne)
+- Zakres czasów do remisji: Min i Max (tylko zdarzenia kompletne)
+
+
+```{r zadanie22, fig.height=8}
+
+n_sim = 50
+lambda_sim = 0.5
+alpha_sim = 1.5
+
+dane_cenz_1 = zad1.1(n = n_sim, t0 = 3.0, a = alpha_sim, l = lambda_sim)
+dane_cenz_2 = zad1.2(n = n_sim, m = 40, a = alpha_sim, l = lambda_sim)
+dane_cenz_3 = zad1.3(n = n_sim, eta = 4.0, a = alpha_sim, l = lambda_sim)
+
+dane_cenz_all = bind_rows(dane_cenz_1, dane_cenz_2, dane_cenz_3)
+
+statystyki_cenz = dane_cenz_all %>%
+  group_by(Typ) %>%
+  summarise(
+    `n` = n(),
+    `d` = sum(Delta == 1),
+    `% cenz.` = round(mean(Delta == 0) * 100, 1),
+    `Śr. obs.` = round(mean(Czas), 3),
+    `Med. obs.` = round(median(Czas), 3),
+    `Śr. rem.` = round(mean(Czas[Delta == 1]), 3),
+    `Med. rem.` = round(median(Czas[Delta == 1]), 3),
+    `Min` = round(min(Czas[Delta == 1]), 3),
+    `Max` = round(max(Czas[Delta == 1]), 3)
+  )
+
+dane_wykres = dane_cenz_all
+dane_wykres$Status = factor(dane_wykres$Delta, 
+                            levels = c(0, 1), 
+                            labels = c("Cenzurowane (0)", "Zdarzenie (1)"))
+
+
+# Wykres 1: Histogramy obserwowanych czasów
+p1 = ggplot(dane_wykres, aes(x = Czas, fill = Status)) +
+  geom_histogram(binwidth = 0.5, color = "black", position = "stack") +
+  facet_wrap(~ Typ, ncol = 3) +
+  scale_fill_manual(values = c("Cenzurowane (0)" = "tomato", "Zdarzenie (1)" = "steelblue")) +
+  labs(
+    title = "Histogramy czasów dla każdego typu cenzurowania",
+    x = "Obserwowany czas",
+    y = "Liczba obserwacji"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Wykres 2: Wykres słupkowy liczby zdarzeń/cenzury
+p2 = ggplot(dane_wykres, aes(x = Typ, fill = Status)) +
+  geom_bar(position = "stack", color = "black", width = 0.7) +
+  scale_fill_manual(values = c("Cenzurowane (0)" = "tomato", "Zdarzenie (1)" = "steelblue")) +
+  labs(
+    title = "Liczba obserwacji kompletnych vs. cenzurowanych",
+    x = "Typ cenzurowania",
+    y = "Liczba obserwacji (n=50 w każdej grupie)",
+    fill = "Status obserwacji"
+  ) +
+  geom_text(
+    aes(label = after_stat(count)), 
+    stat = "count", 
+    position = position_stack(vjust = 0.5), 
+    size = 3.5
+  ) +
+  theme_minimal()
+
+p1 / p2
+```
+
+**Wyniki dla Zadania 2**
+
+Poniższa tabela przedstawia statystyki opisowe dla trzech wygenerowanych zbiorów danych:
+
+```{r zadanie22b}
+kable(
+  statystyki_cenz,
+  caption = "Statystyki opisowe dla wygenerowanych danych cenzurowanych (Zad. 2)",
+  align = "l"
+) %>%
+  kable_styling(latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+### Zadanie 3: Analiza danych pacjentów
+
+W tym zadaniu analizujemy dane 40 pacjentów podzielonych na dwie grupy (Lek A i Lek B), każda po $n = 20$. Obserwacja trwała $t_0 = 1$ rok. Pacjenci, u których nie zaobserwowano remisji w ciągu roku, są traktowani jako dane cenzurowane prawostronnie typu I w czasie $t = 1$.
+
+Najpierw tworzymy ramkę danych zawierającą obie grupy.
+
+```{r zadanie23}
+# --- A ---
+czas_A_event = c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+                 0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+czas_A_cens = rep(1.0, 10)
+czas_A = c(czas_A_event, czas_A_cens)
+status_A = c(rep(1, 10), rep(0, 10)) # 1 = remisja, 0 = cenzura
+
+# --- B ---
+czas_B_event = c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+                 0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+czas_B_cens = rep(1.0, 10)
+czas_B = c(czas_B_event, czas_B_cens)
+status_B = c(rep(1, 10), rep(0, 10))
+
+dane_pacjenci = data.frame(
+  Czas = c(czas_A, czas_B),
+  Delta = c(status_A, status_B),
+  Grupa = factor(rep(c("Lek A", "Lek B"), each = 20))
+)
+```
+
+**Statystyki opisowe dla danych pacjentów**
+
+Podobnie jak w zadaniu 2, obliczamy "rozsądne statystyki opisowe" dla obu grup pacjentów.
+
+```{r zadanie23b}
+# Statystyki opisowe cenz
+statystyki_pacjenci = dane_pacjenci %>%
+  group_by(Grupa) %>%
+  summarise(
+    `n` = n(),
+    `d` = sum(Delta == 1),
+    `% cenz.` = round(mean(Delta == 0) * 100, 1),
+    `Śr. obs.` = round(mean(Czas), 3),
+    `Med. obs.` = round(median(Czas), 3),
+    `Śr. rem.` = round(mean(Czas[Delta == 1]), 3),
+    `Med. rem.` = round(median(Czas[Delta == 1]), 3),
+    `Min` = round(min(Czas[Delta == 1]), 3),
+    `Max` = round(max(Czas[Delta == 1]), 3)
+  )
+```
+
+```{r zadanie23c}
+kable(
+  statystyki_pacjenci,
+  caption = "Statystyki opisowe dla danych pacjentów",
+  align = "l"
+) %>%
+  kable_styling(latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+**Opis danych**
+
+W obu grupach (Lek A i Lek B) obserwowano po 20 pacjentów. W każdej z grup u 10 pacjentów nastąpiła remisja choroby (50% zdarzeń kompletnych), a pozostałych 10 pacjentów było obserwowanych przez cały rok bez remisji (50% danych cenzurowanych).
+
+**Porównanie czasów do remisji (tylko zdarzenia kompletne):**
+
+- Średni czas do remisji: Lek A = 0.422 roku, Lek B = 0.346 roku
+- Mediana czasu do remisji: Lek A = 0.343 roku, Lek B = 0.324 roku
+- Zakres czasów remisji: 
+  - Lek A: od 0.033 do 0.942 roku
+  - Lek B: od 0.038 do 0.691 roku
+
+**Wnioski:** 
+
+Lek B wydaje się prowadzić do szybszej remisji (niższa mediana i średnia), ale charakteryzuje się również węższym zakresem czasów remisji. Grupa otrzymująca Lek A wykazuje większą zmienność czasów do remisji, z przypadkami bardzo późnej remisji.
+
+*Powyższe statystyki dotyczą tylko pacjentów, u których nastąpiła remisja.*
+
+## Lista 3
+
+W zadaniach 1 i 2 korzystamy z danych pacjentów z Listy 2, Zadania 3. Zakładamy, że czasy do remisji $X_i$ pochodzą z rozkładu wykładniczego $E(\vartheta)$, gdzie $\vartheta$ jest nieznanym parametrem intensywności. Szacujemy średni czas do remisji, $\mu = 1/\vartheta$.
+
+W obu grupach ($N=20$) odnotowano $R=10$ remisji w czasie obserwacji $t_0 = 1$.
+
+**Inicjalizacja danych i pomocniczych funkcji**
+
+Na początku definiujemy dane wejściowe dla Grup A i B oraz łączymy je z informacją o cenzurowaniu:
+
+```{r zadanie30, echo = TRUE}
+remisje_A <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032, 
+               0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+remisje_B <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413, 
+               0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+N_osob <- 20
+R_zdarzenia <- 10
+T_cenzury <- 1
+
+dane_A_calosc <- c(remisje_A, rep(T_cenzury, N_osob - R_zdarzenia))
+dane_B_calosc <- c(remisje_B, rep(T_cenzury, N_osob - R_zdarzenia))
+
+s_A <- sum(remisje_A[1:10])
+s_B <- sum(remisje_B[1:10])
+```
+
+### Zadanie 1: Cenzurowanie Typu I
+
+Zakładamy, że dane pochodzą z cenzurowania I typu.
+
+**Estymator największej wiarogodności (NW) dla $\vartheta$**
+
+Estymator NW dla parametru intensywności $\vartheta$ w przypadku rozkładu wykładniczego przy cenzurowaniu I typu jest dany wzorem:
+
+$$\hat{\vartheta} = \frac{R}{T_1}, \quad \text{gdzie} \quad T_1 = \sum_{i=1}^{R} X_{(i)} + t_0(N-R)$$
+
+$T_1$ jest całkowitym czasem testowania.
+
+```{r zadanie31}
+calkowity_czas_test_I <- function(dane_X, N_calkowita, R_zdarzenia, t_cenzury) {
+    dane_posortowane <- sort(dane_X[dane_X < t_cenzury])
+    
+    T1 <- sum(dane_posortowane) + t_cenzury * (N_calkowita - R_zdarzenia)
+    return(T1)
+}
+
+est_NW_Typ_I <- function(dane_X, N_calkowita, R_zdarzenia, t_cenzury) {
+    T1_val <- calkowity_czas_test_I(dane_X, N_calkowita, R_zdarzenia, t_cenzury)
+    return(R_zdarzenia / T1_val)
+}
+```
+
+```{r zadanie31b}
+theta_A_hat_I <- est_NW_Typ_I(dane_A_calosc, N_osob, R_zdarzenia, T_cenzury)
+theta_B_hat_I <- est_NW_Typ_I(dane_B_calosc, N_osob, R_zdarzenia, T_cenzury)
+
+mu_A_hat_I <- 1 / theta_A_hat_I
+mu_B_hat_I <- 1 / theta_B_hat_I
+```
+
+**Wyniki estymacji NW**
+
+Wartości dla $\mu = 1/\vartheta$:
+
+- Grupa A: $1/\hat{\vartheta}_A \approx$ `r round(mu_A_hat_I, 3)`
+- Grupa B: $1/\hat{\vartheta}_B \approx$ `r round(mu_B_hat_I, 3)`
+
+**Konstrukcja przedziału ufności dla $\mu$ (1/$\vartheta$)**
+
+W tym przypadku stosujemy transformację przedziału ufności dla parametru $p = F_{\vartheta}(t_0) = 1 - e^{-\vartheta t_0}$, który estymujemy za pomocą $R/N$. Dla przedziału ufności dla $p$, $[T_L, T_U]$, przedział dla $\vartheta$ to:
+
+$$\left[ \frac{-\ln(1-T_L)}{t_0}, \frac{-\ln(1-T_U)}{t_0} \right]$$
+
+A dla $\mu = 1/\vartheta$:
+
+$$\left[ \frac{t_0}{-\ln(1-T_U)}, \frac{t_0}{-\ln(1-T_L)} \right]$$
+
+Wykorzystamy kwantyle rozkładu Beta, zgodnie z metodą Cloppera-Pearsona.
+
+```{r zadanie31c}
+pu_typ_I <- function(N_calkowita, R_zdarzenia, t_cenzury, alpha) {
+    T_L_p <- qbeta(alpha / 2, R_zdarzenia, N_calkowita - R_zdarzenia + 1)
+    T_U_p <- qbeta(1 - alpha / 2, R_zdarzenia + 1, N_calkowita - R_zdarzenia)
+    
+    mu_L <- t_cenzury / (-log(1 - T_U_p))
+    mu_U <- t_cenzury / (-log(1 - T_L_p))
+    
+    if (mu_L > mu_U) {
+        temp <- mu_L
+        mu_L <- mu_U
+        mu_U <- temp
+    }
+    
+    return(list(mu_L = mu_L, mu_U = mu_U))
+}
+alpha_005_I <- pu_typ_I(N_osob, R_zdarzenia, T_cenzury, alpha = 0.05)
+alpha_001_I <- pu_typ_I(N_osob, R_zdarzenia, T_cenzury, alpha = 0.01)
+```
+
+**Wyniki przedziałów ufności**
+
+- Realizacja PU dla $\mu$ (poziom ufności 95%): (`r round(alpha_005_I$mu_L, 3)`, `r round(alpha_005_I$mu_U, 3)`)
+- Realizacja PU dla $\mu$ (poziom ufności 99%): (`r round(alpha_001_I$mu_L, 3)`, `r round(alpha_001_I$mu_U, 3)`)
+
+### Zadanie 2: Cenzurowanie Typu II
+
+Zakładamy, że obserwacje przerwano po $m=10$ zdarzeniach.
+
+**Estymator największej wiarogodności (NW) dla $\vartheta$**
+
+W przypadku cenzurowania II typu, gdy $m$ zdarzeń jest kompletnych, estymator NW dla $\vartheta$ ma postać:
+
+$$\hat{\vartheta} = \frac{m}{T_2}, \quad \text{gdzie} \quad T_2 = \sum_{i=1}^{m} X_{(i)} + (N-m)X_{(m)}$$
+
+$X_{(m)}$ jest czasem ostatniego zaobserwowanego zdarzenia.
+
+```{r zadanie32}
+calkowity_czas_test_II <- function(dane_X_kompletne, N_calkowita, m_zdarzenia) {
+    X_m <- max(dane_X_kompletne)
+    
+    T2 <- sum(dane_X_kompletne) + (N_calkowita - m_zdarzenia) * X_m
+    return(T2)
+}
+
+# Typ II
+est_NW_Typ_II <- function(dane_X_kompletne, N_calkowita, m_zdarzenia) {
+    T2_val <- calkowity_czas_test_II(dane_X_kompletne, N_calkowita, m_zdarzenia)
+    return(m_zdarzenia / T2_val)
+}
+```
+
+```{r zadanie32b}
+theta_A_hat_II <- est_NW_Typ_II(remisje_A, N_osob, R_zdarzenia)
+theta_B_hat_II <- est_NW_Typ_II(remisje_B, N_osob, R_zdarzenia)
+
+mu_A_hat_II <- 1 / theta_A_hat_II
+mu_B_hat_II <- 1 / theta_B_hat_II
+```
+
+**Wyniki estymacji NW**
+
+Wartości dla $\mu = 1/\vartheta$:
+
+- Grupa A: $1/\hat{\vartheta}_A \approx$ `r round(mu_A_hat_II, 3)`
+- Grupa B: $1/\hat{\vartheta}_B \approx$ `r round(mu_B_hat_II, 3)`
+
+**Konstrukcja przedziału ufności dla $\vartheta$ (i $\mu$)**
+
+Korzystamy z faktu, że statystyka $2\vartheta T_2$ ma rozkład $\chi^2$ z $2m$ stopniami swobody, lub, równoważnie, statystyka $\vartheta T_2 / m$ ma rozkład $\Gamma(m, 1/m)$.
+
+Dla $Q = \vartheta T_2 / m$, przedział ufności dla $\vartheta$ jest dany przez:
+
+$$\left[ \frac{m \cdot q_m(\alpha/2)}{T_2}, \frac{m \cdot q_m(1-\alpha/2)}{T_2} \right]$$
+
+gdzie $q_m(p)$ jest kwantylem rzędu $p$ rozkładu $\Gamma(m, 1/m)$.
+
+```{r zadanie32c}
+# Typ II
+pu_typ_II <- function(dane_X_kompletne, N_calkowita, m_zdarzenia, alpha) {
+    T2_val <- calkowity_czas_test_II(dane_X_kompletne, N_calkowita, m_zdarzenia)
+    
+    q_L <- qgamma(alpha / 2, shape = m_zdarzenia, scale = 1/m_zdarzenia)
+    q_U <- qgamma(1 - alpha / 2, shape = m_zdarzenia, scale = 1/m_zdarzenia)
+    
+    theta_L <- m_zdarzenia * q_L / T2_val
+    theta_U <- m_zdarzenia * q_U / T2_val
+
+    mu_L <- 1 / theta_U 
+    mu_U <- 1 / theta_L
+    
+    return(list(mu_L = mu_L, mu_U = mu_U))
+}
+
+alpha_005_A_II <- pu_typ_II(remisje_A, N_osob, R_zdarzenia, alpha = 0.05)
+alpha_005_B_II <- pu_typ_II(remisje_B, N_osob, R_zdarzenia, alpha = 0.05)
+
+alpha_001_A_II <- pu_typ_II(remisje_A, N_osob, R_zdarzenia, alpha = 0.01)
+alpha_001_B_II <- pu_typ_II(remisje_B, N_osob, R_zdarzenia, alpha = 0.01)
+```
+
+**Wyniki przedziałów ufności**
+
+**Grupa A:**
+
+- Realizacja PU dla $\mu$ (95% PU): (`r round(alpha_005_A_II$mu_L, 3)`, `r round(alpha_005_A_II$mu_U, 3)`)
+- Realizacja PU dla $\mu$ (99% PU): (`r round(alpha_001_A_II$mu_L, 3)`, `r round(alpha_001_A_II$mu_U, 3)`)
+
+**Grupa B:**
+
+- Realizacja PU dla $\mu$ (95% PU): (`r round(alpha_005_B_II$mu_L, 3)`, `r round(alpha_005_B_II$mu_U, 3)`)
+- Realizacja PU dla $\mu$ (99% PU): (`r round(alpha_001_B_II$mu_L, 3)`, `r round(alpha_001_B_II$mu_U, 3)`)
+
+**Podsumowanie wyników**
+
+```{r zadanie32d}
+wyniki <- data.frame(
+  Typ_cenzurowania = c("Typ I", "Typ I", "Typ II", "Typ II"),
+  Grupa = c("A", "B", "A", "B"),
+  Estymacja_mu = c(mu_A_hat_I, mu_B_hat_I, mu_A_hat_II, mu_B_hat_II),
+  PU_95_dolny = c(alpha_005_I$mu_L, alpha_005_I$mu_L, 
+                  alpha_005_A_II$mu_L, alpha_005_B_II$mu_L),
+  PU_95_gorny = c(alpha_005_I$mu_U, alpha_005_I$mu_U, 
+                  alpha_005_A_II$mu_U, alpha_005_B_II$mu_U)
+)
+kable(wyniki, 
+  col.names = c("Typ cenzurowania", "Grupa", "$\\mu$ (estymacja)", 
+                "PU 95\\% - dolny", "PU 95\\% - górny"),
+  digits = 3,
+  caption = "Podsumowanie estymacji i przedziałów ufności dla średniego czasu do remisji"
+)
+```
+
+```{r zadanie32e}
+estymator_T1 <- function(x, t0) {
+  n <- length(x)
+  R <- sum(x <= t0)
+  
+  T1 <- sum(x[x <= t0]) + t0 * (n - R)
+  
+  return(R / T1)
+}
+
+estymator_log <- function(x, t0) {
+  R <- sum(x <= t0)
+  n <- length(x)
+  if (R == 0 || R == n) return(NA)
+  return(-log(1 - R / n) / t0)
+}
+
+theta_true <- 1
+n_values <- c(10, 30)
+t0_values <- c(0.5, 1, 2)
+n_sim <- 1000
+
+wyniki <- data.frame()
+
+for (n in n_values) {
+  for (t0 in t0_values) {
+    est_T1 <- numeric(n_sim)
+    est_log <- numeric(n_sim)
+    
+    for (i in 1:n_sim) {
+      x <- rexp(n, rate = theta_true)
+      est_T1[i] <- estymator_T1(x, t0)
+      est_log[i] <- estymator_log(x, t0)
+    }
+    
+    est_T1 <- est_T1[!is.na(est_T1)]
+    est_log <- est_log[!is.na(est_log)]
+    
+    # Oblicz Bias i MSE
+    bias_T1 <- mean(est_T1 - theta_true)
+    bias_log <- mean(est_log - theta_true)
+    mse_T1 <- mean((est_T1 - theta_true)^2)
+    mse_log <- mean((est_log - theta_true)^2)
+    
+    wyniki <- rbind(wyniki, data.frame(
+      n = n,
+      t0 = t0,
+      Bias_T1 = bias_T1,
+      Bias_log = bias_log,
+      MSE_T1 = mse_T1,
+      MSE_log = mse_log
+    ))
+  }
+}
+
+wyniki_display <- wyniki
+wyniki_display[, 3:6] <- round(wyniki_display[, 3:6], 4)
+```
+
+### Zadanie 3: Porównanie estymatorów parametru \( \vartheta \)
+
+Rozważamy dwa estymatory parametru intensywności \( \vartheta \) dla rozkładu wykładniczego \( E(\vartheta) \), bazując na danych cenzurowanych typu I.
+
+1. **Estymator największej wiarogodności (NW)** — oparty na całkowitym czasie testowania \( T_1 \):
+
+\[
+\hat{\vartheta}_1 = \frac{R}{T_1}, \quad \text{gdzie} \quad T_1 = \sum_{i=1}^{R} X_{(i)} + t_0 (n - R)
+\]
+
+2. **Estymator logarytmiczny** — oparty na proporcji zdarzeń \( R/n \):
+
+\[
+\hat{\vartheta}_2 = \frac{-\log(1 - R/n)}{t_0}
+\]
+
+Celem jest porównanie dokładności obu estymatorów za pomocą dwóch miar:
+
+- \( \text{Bias}(\hat{\vartheta}) = \mathbb{E}[\hat{\vartheta}] - \vartheta \)
+- **Błąd średniokwadratowy**: \( \text{MSE}(\hat{\vartheta}) = \mathbb{E}[(\hat{\vartheta} - \vartheta)^2] \)
+
+Symulacje przeprowadzono dla \( \vartheta = 1 \), \( n \in \{10, 30\} \), \( t_0 \in \{0.5, 1, 2\} \), na podstawie 1000 prób.
+
+
+```{r zadanie33}
+kable(wyniki_display,
+      caption = "Porównanie estymatorów: Bias i MSE dla różnych wartości n i $t_0$",
+      col.names = c("n", "$t_0$", "Bias ($\\hat{\\theta}_1$)", 
+                    "Bias ($\\hat{\\theta}_2$)", "MSE ($\\hat{\\theta}_1$)", 
+                    "MSE ($\\hat{\\theta}_2$)"),
+      align = "c",
+      row.names = FALSE)
+```
+
+## Lista 4
+
+### Zadanie 1: Funkcja poziomu krytycznego (p-value)
+
+**Opis teoretyczny**
+
+Celem zadania było napisanie funkcji obliczającej wartość poziomu krytycznego (p-value) w Teście Ilorazu Wiarogodności (LRT) dla parametru intensywności $\vartheta$ rozkładu wykładniczego $E(\vartheta)$, przy cenzurowaniu typu I.
+
+**Estymator Największej Wiarogodności**
+
+Estymator Największej Wiarogodności (NW) parametru $\vartheta$ w przypadku cenzurowania I-go typu jest dany jako iloraz liczby zdarzeń kompletnych $(R)$ przez całkowity czas testowania $(T_1)$:
+
+$$\hat{\vartheta} = \frac{R}{T_1}, \quad \text{gdzie} \quad T_1 = \sum_{i=1}^{R} X_{(i)} + t_0(n-R)$$
+
+gdzie $R$ jest liczbą zdarzeń, $t_0$ jest czasem cenzurowania, a $n$ jest całkowitą liczbą obserwacji.
+
+**Statystyka testu LRT**
+
+W teście LRT statystyka $\lambda(t^*)$ jest ilorazem supremum funkcji wiarogodności w obszarze hipotezy zerowej $(\Theta_0)$ i supremum w całej przestrzeni parametrów $(\Theta)$:
+
+$$\lambda(t^*) = \frac{\sup_{\vartheta \in \Theta_0} L(\vartheta; t^*)}{\sup_{\vartheta \in \Theta} L(\vartheta; t^*)}$$
+
+Asymptotyczny rozkład statystyki $-2\ln(\lambda(t^*))$, zgodnie z Twierdzeniem Wilksa, przy założeniu prawdziwości $H_0$, dąży do rozkładu $\chi^2$ z jednym stopniem swobody (w przypadku testowania hipotezy prostej dotyczącej jednego parametru). 
+
+Wartość p-value jest obliczana jako:
+
+$$p\text{-value} = 1 - F_{\chi^2(1)}(-2\ln(\lambda_{obs}))$$
+
+**Implementacja**
+
+```{r zadanie41, echo=TRUE}
+wart_poz_kryt <- function(r, s, n, t0, theta0, rodzaj = "two.sided"){
+  
+  theta_hat <- r / (s + t0 * (n - r))
+  
+  L <- function(theta){
+    L <- (theta^r) * exp(-theta * (s + t0 * (n - r)))
+    return(L)
+  }
+  
+  L_hat <- L(theta_hat)
+  L_theta0 <- L(theta0)
+  
+  if (rodzaj == "two.sided"){
+    lambda_obs <- L_theta0 / L_hat
+  } else if (rodzaj == "less") {
+    if (theta_hat < theta0){
+      lambda_obs <- L_theta0 / L_hat
+    } else {
+      lambda_obs <- 1
+    }
+  } else {
+    if (theta_hat > theta0){
+      lambda_obs <- L_theta0 / L_hat
+    } else {
+      lambda_obs <- 1
+    }
+  }
+  
+  # Asymptotyczna p-value oparta na rozkładzie chi^2 z 1 stopniem swobody
+  p_value <- 1 - pchisq(-2 * log(lambda_obs), df = 1)
+  
+  return(p_value)
+}
+```
+
+### Zadanie 2: Oszacowanie mocy i rozmiaru testu
+
+**Opis symulacji**
+
+Przeprowadzono symulacje empirycznej mocy i rozmiaru testu ilorazu wiarygodności dla hipotezy dwustronnej:
+
+\[
+H_0: \vartheta = \vartheta_0 = 0{,}5
+\]
+
+Celem było zbadanie zachowania testu w różnych warunkach próby oraz ocena jego skuteczności w wykrywaniu odchyleń od hipotezy zerowej.
+
+**Parametry symulacji**
+
+- **Czas cenzurowania**: \( t_0 = 2 \)
+- **Liczebności próby**: \( n \in \{20, 50\} \)
+- **Liczba symulacji**: \( M = 10\,000 \)
+- **Poziom istotności**: \( \alpha = 0{,}05 \)
+- **Wartości alternatywne**: \( \vartheta \in \{0{,}3,\ 0{,}35,\ \ldots,\ 0{,}75\} \)
+
+**Definicje**
+
+- **Rozmiar testu** – prawdopodobieństwo odrzucenia prawdziwej hipotezy zerowej. Dla prób, w których \( \vartheta = \vartheta_0 \), wartość ta powinna być bliska poziomowi istotności \( \alpha = 0{,}05 \).
+
+- **Moc testu** – prawdopodobieństwo odrzucenia fałszywej hipotezy zerowej. Zależy od odległości rzeczywistej wartości parametru od wartości testowanej. W praktyce empiryczna moc testu nie musi być symetryczna względem \( \vartheta_0 \), co wynika z wpływu schematu cenzurowania oraz kształtu rozkładu statystyki testowej.
+
+**Kod symulacyjny**
+
+```{r zadanie42, echo=TRUE}
+
+
+symuluj_moc <- function(n, t0, theta0, theta_alt, M = 10000, alpha = 0.05){
+  
+  odrzucenia <- 0
+  
+  for(i in 1:M){
+    # Generowanie danych z rozkładu wykładniczego
+    dane <- rexp(n, rate = theta_alt)
+    
+    # Cenzurowanie typu I
+    dane_cenz <- pmin(dane, t0)
+    r <- sum(dane <= t0)  # liczba zdarzeń kompletnych
+    s <- sum(dane_cenz[dane <= t0])  # suma czasów zdarzeń
+    
+    # Obliczanie p-value
+    p_val <- wart_poz_kryt(r = r, s = s, n = n, t0 = t0, 
+                           theta0 = theta0, rodzaj = "two.sided")
+    
+    # Decyzja o odrzuceniu H0
+    if(p_val < alpha){
+      odrzucenia <- odrzucenia + 1
+    }
+  }
+  
+  moc <- odrzucenia / M
+  return(moc)
+}
+
+theta0 <- 0.5
+t0 <- 2
+M <- 10000
+
+theta_values <- c(0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75)
+
+# Symulacja dla n = 20
+wyniki_n20 <- sapply(theta_values, function(theta){
+  symuluj_moc(n = 20, t0 = t0, theta0 = theta0, theta_alt = theta, M = M)
+})
+
+# Symulacja dla n = 50
+wyniki_n50 <- sapply(theta_values, function(theta){
+  symuluj_moc(n = 50, t0 = t0, theta0 = theta0, theta_alt = theta, M = M)
+})
+
+wyniki <- list(
+  "n=20" = data.frame(theta = theta_values, moc = wyniki_n20),
+  "n=50" = data.frame(theta = theta_values, moc = wyniki_n50)
+)
+
+wyniki[["n=20"]]$rozmiar <- wyniki_n20[theta_values == 0.5]
+wyniki[["n=50"]]$rozmiar <- wyniki_n50[theta_values == 0.5]
+```
+
+**Wyniki symulacji**
+
+```{r zadanie42b}
+tabela_mocy <- wyniki[["n=20"]] %>%
+  select(theta, moc) %>%
+  rename(moc_n20 = moc) %>%
+  left_join(
+    wyniki[["n=50"]] %>% select(theta, moc) %>% rename(moc_n50 = moc),
+    by = "theta"
+  ) %>%
+  mutate(
+    moc_n20 = round(moc_n20, 4),
+    moc_n50 = round(moc_n50, 4)
+  )
+
+kable(
+  tabela_mocy,
+  caption = "Porównanie mocy testu dla różnych wartości $\\theta$ i liczebności prób (n = 20, 50)",
+  col.names = c("$\\theta$", "Moc (n = 20)", "Moc (n = 50)"), 
+  align = "c"
+)
+```
+
+**Wizualizacja mocy testu**
+
+```{r zadanie42c, fig.width=8, fig.height=5}
+library(ggplot2)
+
+tabela_mocy_long <- tabela_mocy %>%
+  tidyr::pivot_longer(cols = c(moc_n20, moc_n50), 
+                      names_to = "n", 
+                      values_to = "moc") %>%
+  mutate(n = ifelse(n == "moc_n20", "n = 20", "n = 50"))
+
+ggplot(tabela_mocy_long, aes(x = theta, y = moc, color = n, group = n)) +
+  geom_line(size = 1) +
+  geom_point(size = 2.5) +
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "red") +
+  labs(
+    title = expression("Moc testu LRT w zależności od wartości parametru " * theta),
+    x = expression(theta),
+    y = "Moc testu",
+    color = "Liczebność próby"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+**Wnioski**
+
+Na podstawie wyników oszacowania mocy testu zaobserwowano:
+
+1. **Wpływ liczebności próby**: Wartości mocy są wyższe dla $n = 50$ niż dla $n = 20$ dla każdego $\vartheta \neq \vartheta_0$. Oznacza to, że zwiększenie liczebności próby poprawia zdolność testu do wykrywania rzeczywistych różnic w parametrze.
+
+2. **Rozmiar testu**: 
+   - Dla $n = 20$: rozmiar testu wynosi około `r round(wyniki[["n=20"]]$rozmiar[1], 4)`
+   - Dla $n = 50$: rozmiar testu wynosi około `r round(wyniki[["n=50"]]$rozmiar[1], 4)`
+
+3. **Moc testu**: Im bardziej rzeczywista wartość $\vartheta$ odbiega od $\vartheta_0 = 0.5$, tym większa moc testu, co jest zgodne z teorią.
+
+### Zadanie 3: Weryfikacja hipotezy dla danych pacjentów
+
+**Opis problemu**
+
+W zadaniu tym zweryfikowano hipotezę, że średni czas do remisji choroby w grupie A oraz w grupie B wynosi 1, bazując na danych pacjentów z Listy 2, Zadania 3. 
+
+Hipoteza zerowa ma postać $H_0: \mu = 1$, co przy rozkładzie wykładniczym $E(\vartheta)$ jest równoważne hipotezie $H_0: \vartheta = 1$.
+
+**Parametry eksperymentu:**
+
+- Liczba pacjentów: $N = 20$
+- Liczba zdarzeń kompletnych: $R = 10$
+- Czas cenzurowania: $t_0 = 1$ rok
+
+Suma czasów zdarzeń dla Leku A: `r round(s_A, 3)`  
+Suma czasów zdarzeń dla Leku B: `r round(s_B, 3)`
+
+**Oszacowania parametrów**
+
+```{r zadanie43b}
+r <- 10
+n <- 20
+t0 <- 1
+theta0 <- 1
+
+# Estymatory NW dla theta
+theta_hat_A <- r / (s_A + t0 * (n - r))
+theta_hat_B <- r / (s_B + t0 * (n - r))
+
+# Estymatory dla średniego czasu (mu = 1/theta)
+mu_hat_A <- 1 / theta_hat_A
+mu_hat_B <- 1 / theta_hat_B
+```
+
+Lek A: $\hat{\theta} =$ `r round(theta_hat_A, 3)`, $\hat{\mu} =$ `r round(mu_hat_A, 3)`  
+Lek B: $\hat{\theta} =$ `r round(theta_hat_B, 3)`, $\hat{\mu} =$ `r round(mu_hat_B, 3)`
+
+**Test hipotezy**
+
+```{r zadanie43c}
+p_wart_A <- wart_poz_kryt(r = r, s = s_A, n = n, t0 = t0,
+                          theta0 = theta0, rodzaj = "two.sided")
+
+p_wart_B <- wart_poz_kryt(r = r, s = s_B, n = n, t0 = t0,
+                          theta0 = theta0, rodzaj = "two.sided")
+```
+
+- **Lek A**: $p$-value = `r round(p_wart_A, 4)`
+- **Lek B**: $p$-value = `r round(p_wart_B, 4)`
+
+**Wyniki i wnioski**
+
+Przyjmując poziom istotności $\alpha = 0.05$:
+
+Z uwagi na to, że oszacowane średnie czasy remisji ($\hat{\mu}_A \approx$ `r round(mu_hat_A, 3)` i $\hat{\mu}_B \approx$ `r round(mu_hat_B, 3)` roku) są wyższe niż testowana wartość $\mu_0 = 1$ roku, oraz biorąc pod uwagę, że uzyskane p-wartości wynoszą odpowiednio `r round(p_wart_A, 4)` dla Leku A i `r round(p_wart_B, 4)` dla Leku B
+
+W obu przypadkach $p > \alpha$ (`r round(p_wart_A, 4)` > 0.05 i `r round(p_wart_B, 4)` > 0.05), dlatego **nie istnieją** statystycznie istotne podstawy do **odrzucenia hipotezy zerowej** $H_0: \vartheta = 1$.
+
+Oznacza to, że na podstawie dostępnych danych i przyjętego poziomu istotności, nie stwierdzono statystycznie istotnych dowodów, aby średni czas do remisji różnił się od 1 roku w żadnej z grup leczonych
+
+```{r zadanie43d}
+podsumowanie <- data.frame(
+  Grupa = c("Lek A", "Lek B"),
+  "$\\hat{\\theta}$" = c(round(theta_hat_A, 3), round(theta_hat_B, 3)),
+  "$\\hat{\\mu}$" = c(round(mu_hat_A, 3), round(mu_hat_B, 3)),
+  "p-value" = c(round(p_wart_A, 4), round(p_wart_B, 4)),
+  Decyzja = c("Brak podstaw do odrzucenia H0", "Brak podstaw do odrzucenia H0"),
+  check.names = FALSE
+)
+
+knitr::kable(
+  podsumowanie,
+  caption = "Podsumowanie wyników testów hipotez dla obu leków",
+  align = "c",
+  escape = FALSE
+)
+```
+
+### Podsumowanie
+
+W ramach **Listy 4** zaimplementowano i przetestowano asymptotyczny test ilorazu wiarygodności dla danych cenzurowanych pochodzących z rozkładu wykładniczego. Celem było zbadanie skuteczności testu w różnych warunkach próby.
+
+Wyniki symulacji wykazały, że zwiększenie liczebności próby znacząco wpływa na poprawę mocy testu.
+
+W analizie rzeczywistych danych klinicznych porównano czas do remisji w dwóch grupach pacjentów: otrzymujących **Lek A** oraz **Lek B**. Otrzymane wartości statystyki istotności wyniosły:
+
+\[
+\text{Lek A: } p = 0{,}2374, \quad \text{Lek B: } p = 0{,}323
+\]
+
+Obie wartości są większe od przyjętego poziomu istotności \(\alpha = 0{,}05\), co oznacza brak podstaw do odrzucenia hipotezy zerowej. Innymi słowy, nie ma statystycznie istotnych dowodów na to, że średni czas do remisji w którejkolwiek z grup jest krótszy niż 1 rok.
+
+W związku z tym, na podstawie przeprowadzonego testu, nie można stwierdzić, że leczenie którąkolwiek z badanych terapii prowadzi do szybszej remisji.
