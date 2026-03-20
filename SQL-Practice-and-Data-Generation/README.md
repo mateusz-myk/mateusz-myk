@@ -4,7 +4,7 @@ Zbiór projektów i zadań demonstrujących biegłość w operacjach na bazach d
 
 ### Kluczowe komponenty:
 * **Data Generation (`projekt_fejker.py`):** Skrypt wykorzystujący bibliotekę `Faker` do tworzenia syntetycznych zbiorów danych pracowników (eksport do formatu .csv).
-* **SQL Querying (`1_i_2_lista.sql`):** Szeroki wachlarz zapytań rozwiązujących typowe problemy bazodanowe, w tym:
+* **SQL Querying (`SQL_zapytania.sql`):** Szeroki wachlarz zapytań rozwiązujących typowe problemy bazodanowe, w tym:
     * Zaawansowane filtrowanie danych (`WHERE`, `LIKE`, `BETWEEN`).
     * Agregacja i raportowanie danych (`COUNT`, `AVG`, `SUM`).
     * Operacje na unikalnych rekordach (`DISTINCT`) oraz manipulacja datami.
