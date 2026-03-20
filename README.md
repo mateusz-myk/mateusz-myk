@@ -20,11 +20,6 @@ Witaj! To moje repozytorium portfolio, zawierające różnorodne projekty z dzie
 | R/Statystyka | Survival Analysis, Time Series |
 | Symulacje | 3-Body Problem Simulator |
 
-
-## Jak używać
-- Każdy folder ma własny README.md z opisem
-- Licencja: MIT (używać swobodnie z podaniem autora)
-
 ## Kontakt
 - GitHub: mateusz-myk
 - Lokalizacja: Wrocław, Polska
